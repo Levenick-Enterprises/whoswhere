@@ -15,7 +15,14 @@ import {
 } from "@dnd-kit/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useMemo, useOptimistic, useState, type ReactNode } from "react";
+import {
+  startTransition,
+  useCallback,
+  useMemo,
+  useOptimistic,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
 
@@ -35,6 +42,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
+  const openPerson = useCallback((id: string) => router.push(`/people/${id}`), [router]);
 
   const [optimisticPeople, applyOptimisticUpdate] = useOptimistic(
     people,
@@ -160,7 +168,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                 count={unassignedAll.length}
               >
                 {visibleUnassigned.map((person) => (
-                  <DraggablePill key={person.id} person={person} />
+                  <DraggablePill key={person.id} person={person} onOpen={openPerson} />
                 ))}
               </DropZone>
             </li>
@@ -185,7 +193,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                   href={`/jobsites/${jobsite.id}`}
                 >
                   {displayedPills.map((person) => (
-                    <DraggablePill key={person.id} person={person} />
+                    <DraggablePill key={person.id} person={person} onOpen={openPerson} />
                   ))}
                 </DropZone>
               </li>
@@ -251,7 +259,7 @@ function DropZone({
   );
 }
 
-function DraggablePill({ person }: { person: Person }) {
+function DraggablePill({ person, onOpen }: { person: Person; onOpen: (id: string) => void }) {
   const { attributes, isDragging, listeners, setNodeRef } = useDraggable({
     id: person.id,
   });
@@ -261,7 +269,8 @@ function DraggablePill({ person }: { person: Person }) {
       <button
         ref={setNodeRef}
         type="button"
-        aria-label={`Reassign ${person.name}`}
+        aria-label={`Open ${person.name}'s record. Long-press to drag and reassign.`}
+        onClick={() => onOpen(person.id)}
         {...attributes}
         {...listeners}
         className={`touch-none cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${

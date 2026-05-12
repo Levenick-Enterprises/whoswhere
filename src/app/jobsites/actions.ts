@@ -38,7 +38,7 @@ export async function updateJobsiteAction(id: string, formData: FormData) {
 
   revalidatePath("/jobsites");
   revalidatePath(`/jobsites/${id}`);
-  redirect("/jobsites");
+  redirect(`/jobsites/${id}`);
 }
 
 export async function deleteJobsiteAction(id: string) {

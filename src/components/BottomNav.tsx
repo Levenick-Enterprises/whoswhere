@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { href: "/jobsites", label: "Jobsites" },
   { href: "/people", label: "People" },
+  { href: "/trash", label: "Trash" },
 ] as const;
 
 export function BottomNav() {

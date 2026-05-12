@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import { PeopleList } from "./PeopleList";
@@ -9,7 +11,7 @@ export default async function PeoplePage() {
 
   const { data, error } = await supabase
     .from("people")
-    .select("id, name, phone, notes, current_jobsite:current_jobsite_id (id, name)")
+    .select("id, name, phone, notes, current_jobsite:current_jobsite_id (id, name, archived_at)")
     .is("archived_at", null)
     .order("name", { ascending: true });
 
@@ -17,13 +19,32 @@ export default async function PeoplePage() {
     throw new Error(`Supabase fetch failed: ${JSON.stringify(error)}`);
   }
 
+  // A person's current_jobsite_id can still reference a jobsite that has been
+  // archived. Treat those as unassigned in the UI — the foreman doesn't want
+  // to see crew labelled with a jobsite that's sitting in Trash.
+  const people = (data ?? []).map((p) => ({
+    ...p,
+    current_jobsite:
+      p.current_jobsite && !p.current_jobsite.archived_at
+        ? { id: p.current_jobsite.id, name: p.current_jobsite.name }
+        : null,
+  }));
+
   return (
     <section className="flex flex-col gap-4">
       <header className="flex items-baseline justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
-        <span className="text-xs tabular-nums text-zinc-500">{data?.length ?? 0} active</span>
+        <div className="flex items-baseline gap-3">
+          <span className="text-xs tabular-nums text-zinc-500">{people.length} active</span>
+          <Link
+            href="/people/new"
+            className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          >
+            + New
+          </Link>
+        </div>
       </header>
-      <PeopleList people={data ?? []} />
+      <PeopleList people={people} />
     </section>
   );
 }

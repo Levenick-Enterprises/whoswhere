@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type JobsiteWithPeople = {
@@ -41,29 +42,31 @@ export function JobsitesList({ jobsites }: { jobsites: JobsiteWithPeople[] }) {
       ) : (
         <ul className="flex flex-col gap-3">
           {filtered.map((jobsite) => (
-            <li
-              key={jobsite.id}
-              className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-base font-semibold tracking-tight">{jobsite.name}</h2>
-                <span className="text-xs tabular-nums text-zinc-500">
-                  {jobsite.people.length} {jobsite.people.length === 1 ? "person" : "people"}
-                </span>
-              </div>
-              {jobsite.address && <p className="text-sm text-zinc-500">{jobsite.address}</p>}
-              {jobsite.people.length > 0 && (
-                <ul className="flex flex-wrap gap-1.5">
-                  {jobsite.people.map((person) => (
-                    <li
-                      key={person.id}
-                      className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                    >
-                      {person.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <li key={jobsite.id}>
+              <Link
+                href={`/jobsites/${jobsite.id}`}
+                className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="text-base font-semibold tracking-tight">{jobsite.name}</h2>
+                  <span className="text-xs tabular-nums text-zinc-500">
+                    {jobsite.people.length} {jobsite.people.length === 1 ? "person" : "people"}
+                  </span>
+                </div>
+                {jobsite.address && <p className="text-sm text-zinc-500">{jobsite.address}</p>}
+                {jobsite.people.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {jobsite.people.map((person) => (
+                      <li
+                        key={person.id}
+                        className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      >
+                        {person.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Link>
             </li>
           ))}
         </ul>
@@ -77,7 +80,7 @@ function EmptyState({ query, totalRows }: { query: string; totalRows: number }) 
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
         <p>No jobsites yet.</p>
-        <p className="mt-1 text-xs">Create one via the upcoming CRUD flow (separate PR).</p>
+        <p className="mt-1 text-xs">Tap “+ New” above to create one.</p>
       </div>
     );
   }

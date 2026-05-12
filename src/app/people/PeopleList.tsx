@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type PersonWithJobsite = {
@@ -41,25 +42,27 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
       ) : (
         <ul className="flex flex-col gap-2">
           {filtered.map((person) => (
-            <li
-              key={person.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-base font-medium">{person.name}</span>
-                {person.phone && (
-                  <span className="truncate text-xs text-zinc-500">{person.phone}</span>
+            <li key={person.id}>
+              <Link
+                href={`/people/${person.id}`}
+                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-base font-medium">{person.name}</span>
+                  {person.phone && (
+                    <span className="truncate text-xs text-zinc-500">{person.phone}</span>
+                  )}
+                </div>
+                {person.current_jobsite ? (
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                    {person.current_jobsite.name}
+                  </span>
+                ) : (
+                  <span className="shrink-0 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
+                    unassigned
+                  </span>
                 )}
-              </div>
-              {person.current_jobsite ? (
-                <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                  {person.current_jobsite.name}
-                </span>
-              ) : (
-                <span className="shrink-0 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
-                  unassigned
-                </span>
-              )}
+              </Link>
             </li>
           ))}
         </ul>
@@ -73,7 +76,7 @@ function EmptyState({ query, totalRows }: { query: string; totalRows: number }) 
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
         <p>No people yet.</p>
-        <p className="mt-1 text-xs">Create one via the upcoming CRUD flow (separate PR).</p>
+        <p className="mt-1 text-xs">Tap “+ New” above to create one.</p>
       </div>
     );
   }

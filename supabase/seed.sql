@@ -1,0 +1,5 @@
+-- Local-development seed data, loaded by `supabase db reset`.
+-- Production / remote pushes do not run this file.
+--
+-- Add INSERTs here when v1 features need predictable test data
+-- (e.g., a few jobsites + people for DnD smoke testing).

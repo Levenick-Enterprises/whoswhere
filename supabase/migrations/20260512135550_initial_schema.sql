@@ -6,7 +6,9 @@
 -- must go through server actions using the service_role key. When auth lands
 -- in a future migration, policies will be added based on auth.uid().
 
-create extension if not exists pgcrypto;
+-- pgcrypto is not required: gen_random_uuid() is built into Postgres 13+
+-- via pg_catalog. Supabase runs PG 15+, so the column defaults below work
+-- without an extension install.
 
 -- ──────────────────────────────────────────────────────────────────────
 -- jobsites

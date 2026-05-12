@@ -42,7 +42,10 @@ export function BottomNav() {
       <Link
         href={moreHref}
         aria-label="More"
-        aria-current={moreActive ? "page" : undefined}
+        // Only flag as the current "page" when the hamburger's own destination
+        // is loaded; the highlight extends to /trash visually but assistive
+        // tech should not be told the user is on /more when they're on /trash.
+        aria-current={pathname === moreHref ? "page" : undefined}
         className={`flex w-16 items-center justify-center py-4 transition-colors ${
           moreActive
             ? "text-zinc-950 dark:text-zinc-50"

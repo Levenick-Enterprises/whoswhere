@@ -1,13 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
 
 import { DeleteButton } from "@/components/DeleteButton";
+import { EditModeControls, readOnlyInputClass } from "@/components/EditModeControls";
 import { FormField, inputClass } from "@/components/FormField";
-
-const viewClass =
-  "w-full rounded-lg border border-transparent bg-transparent px-3 py-2 text-base text-zinc-900 read-only:cursor-default dark:text-zinc-100";
 
 export function JobsiteEditForm({
   jobsite,
@@ -21,7 +18,7 @@ export function JobsiteEditForm({
   const [isEditing, setIsEditing] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const fieldClass = isEditing ? inputClass : viewClass;
+  const fieldClass = isEditing ? inputClass : readOnlyInputClass;
 
   function cancelEdit() {
     formRef.current?.reset();
@@ -67,26 +64,11 @@ export function JobsiteEditForm({
           />
         </FormField>
 
-        {isEditing ? (
-          <div className="flex gap-2">
-            <SaveButton />
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
-          >
-            Edit
-          </button>
-        )}
+        <EditModeControls
+          isEditing={isEditing}
+          onEdit={() => setIsEditing(true)}
+          onCancel={cancelEdit}
+        />
       </form>
 
       {isEditing && (
@@ -98,18 +80,5 @@ export function JobsiteEditForm({
         </div>
       )}
     </>
-  );
-}
-
-function SaveButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-    >
-      {pending ? "Saving…" : "Save"}
-    </button>
   );
 }

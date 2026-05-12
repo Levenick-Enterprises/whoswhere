@@ -20,7 +20,9 @@ export default async function MorePage() {
     ]);
 
   if (jErr || pErr) {
-    throw new Error(`Supabase fetch failed: ${JSON.stringify(jErr ?? pErr)}`);
+    throw new Error(
+      `Supabase fetch failed — jobsites: ${JSON.stringify(jErr)} / people: ${JSON.stringify(pErr)}`,
+    );
   }
 
   const trashTotal = (trashedJobsites ?? 0) + (trashedPeople ?? 0);

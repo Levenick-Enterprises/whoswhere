@@ -4,9 +4,9 @@ A digital magnet board for a construction foreman: list of jobsites, list of peo
 
 ## Stack
 
-- Next.js 15 (App Router) on Vercel
+- Next.js 16 (App Router) on Vercel
 - Supabase (Postgres + Auth + Realtime)
-- TypeScript, Tailwind, mobile-first
+- TypeScript, Tailwind v4, mobile-first
 - `@dnd-kit` for drag-and-drop; tap-to-assign for touch-first flows
 
 ## Setup
@@ -14,7 +14,7 @@ A digital magnet board for a construction foreman: list of jobsites, list of peo
 ```sh
 pnpm install                       # install deps
 ./scripts/install-hooks.sh         # one-time: installs commit-msg hook
-pnpm dev                           # start the dev server
+pnpm dev                           # start the dev server at http://localhost:3000
 ```
 
 Env vars (copy `.env.example` → `.env.local`):
@@ -22,6 +22,18 @@ Env vars (copy `.env.example` → `.env.local`):
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
+
+## Scripts
+
+| Script              | Purpose                        |
+| ------------------- | ------------------------------ |
+| `pnpm dev`          | Run the dev server (Turbopack) |
+| `pnpm build`        | Production build               |
+| `pnpm start`        | Serve the production build     |
+| `pnpm typecheck`    | `tsc --noEmit`                 |
+| `pnpm lint`         | ESLint                         |
+| `pnpm format`       | Prettier write                 |
+| `pnpm format:check` | Prettier check                 |
 
 ## Conventions
 

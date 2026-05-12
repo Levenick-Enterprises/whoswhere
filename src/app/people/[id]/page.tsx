@@ -52,7 +52,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
           <span className="text-xs uppercase tracking-wide text-zinc-500">Current jobsite</span>
           <span className="truncate font-medium">{currentJobsite?.name ?? "Unassigned"}</span>
         </div>
-        <span className="shrink-0 text-xs text-zinc-500">
+        <span className="shrink-0 rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
           {currentJobsite ? "Change" : "Assign"} →
         </span>
       </Link>

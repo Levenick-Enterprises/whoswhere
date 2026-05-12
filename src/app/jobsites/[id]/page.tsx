@@ -43,11 +43,11 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
         href={`/jobsites/${jobsite.id}/assign`}
         className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-xs uppercase tracking-wide text-zinc-500">
-            Crew ({crew.length})
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            Who&apos;s here? ({crew.length})
           </span>
-          <span className="text-xs text-zinc-500">
+          <span className="rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
             {crew.length === 0 ? "Add crew" : "Manage"} →
           </span>
         </div>

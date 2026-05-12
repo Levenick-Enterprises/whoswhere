@@ -17,12 +17,15 @@ build/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Editor / OS
 .DS_Store
 .vscode/
 .idea/
 *.swp
+*.pem
 
 # Vercel
 .vercel/
@@ -37,3 +40,9 @@ next-env.d.ts
 
 # Coverage
 coverage/
+
+# Claude (local-only state)
+.claude/scratchpads/*
+!.claude/scratchpads/.gitkeep
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

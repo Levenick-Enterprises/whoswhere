@@ -14,7 +14,7 @@ export default async function Home() {
   ]);
 
   if (jobsitesError || peopleError) {
-    throw jobsitesError ?? peopleError;
+    throw new Error(`Supabase fetch failed: ${JSON.stringify(jobsitesError ?? peopleError)}`);
   }
 
   return (

@@ -9,22 +9,33 @@ export const dynamic = "force-dynamic";
 export default async function JobsitesPage() {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("jobsites")
-    .select("id, name, address, notes, people(id, name)")
-    .is("archived_at", null)
-    .is("people.archived_at", null)
-    .order("name", { ascending: true });
+  const [{ data: jobsites, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+    supabase
+      .from("jobsites")
+      .select("id, name, address")
+      .is("archived_at", null)
+      .order("name", { ascending: true }),
+    supabase
+      .from("people")
+      .select(
+        "id, name, phone, current_jobsite_id, current_jobsite:current_jobsite_id (archived_at)",
+      )
+      .is("archived_at", null)
+      .order("name", { ascending: true }),
+  ]);
 
-  if (error) {
-    throw new Error(`Supabase fetch failed: ${JSON.stringify(error)}`);
+  if (jErr || pErr) {
+    throw new Error(`Supabase fetch failed: ${JSON.stringify(jErr ?? pErr)}`);
   }
 
-  // PostgREST returns embedded rows in insertion order; sort by name client-side
-  // so the crew pills under each jobsite read alphabetically.
-  const jobsites = (data ?? []).map((j) => ({
-    ...j,
-    people: j.people.slice().sort((a, b) => a.name.localeCompare(b.name)),
+  // Normalize people whose current_jobsite points at an archived jobsite to
+  // "unassigned" — same rule the rest of the app applies.
+  const normalizedPeople = (people ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    phone: p.phone,
+    current_jobsite_id:
+      p.current_jobsite && !p.current_jobsite.archived_at ? p.current_jobsite_id : null,
   }));
 
   return (
@@ -32,7 +43,9 @@ export default async function JobsitesPage() {
       <header className="flex items-baseline justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Jobsites</h1>
         <div className="flex items-baseline gap-3">
-          <span className="text-xs tabular-nums text-zinc-500">{jobsites.length} active</span>
+          <span className="text-xs tabular-nums text-zinc-500">
+            {(jobsites ?? []).length} active
+          </span>
           <Link
             href="/jobsites/new"
             className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
@@ -41,7 +54,7 @@ export default async function JobsitesPage() {
           </Link>
         </div>
       </header>
-      <JobsitesList jobsites={jobsites} />
+      <JobsitesList jobsites={jobsites ?? []} people={normalizedPeople} />
     </section>
   );
 }

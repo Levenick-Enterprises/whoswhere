@@ -70,16 +70,7 @@ export async function restorePersonAction(id: string) {
   revalidatePath("/trash");
 }
 
-/**
- * Sets a person's current_jobsite_id. Passing null unassigns them.
- * Used from both pickers: /people/[id]/assign and /jobsites/[id]/assign.
- * `redirectTo` is the path to return to after the write completes.
- */
-export async function assignPersonAction(
-  personId: string,
-  jobsiteId: string | null,
-  redirectTo: string,
-) {
+async function assignPerson(personId: string, jobsiteId: string | null) {
   const supabase = createAdminClient();
   const { data: previous, error: fetchError } = await supabase
     .from("people")
@@ -92,8 +83,6 @@ export async function assignPersonAction(
     throw new Error(`assignPerson lookup failed: ${JSON.stringify(fetchError)}`);
   }
   if (!previous) {
-    // The person was deleted (or never existed) between the picker render
-    // and the form submit. Don't silently no-op the write.
     notFound();
   }
 
@@ -106,7 +95,6 @@ export async function assignPersonAction(
     throw new Error(`assignPerson failed: ${JSON.stringify(error)}`);
   }
 
-  // Refresh anything that may render this assignment.
   revalidatePath("/people");
   revalidatePath("/jobsites");
   revalidatePath(`/people/${personId}`);
@@ -114,6 +102,26 @@ export async function assignPersonAction(
   if (previous.current_jobsite_id && previous.current_jobsite_id !== jobsiteId) {
     revalidatePath(`/jobsites/${previous.current_jobsite_id}`);
   }
+}
 
+/**
+ * Form-driven variant used by the picker pages — redirects back to
+ * `redirectTo` after the write completes.
+ */
+export async function assignPersonAction(
+  personId: string,
+  jobsiteId: string | null,
+  redirectTo: string,
+) {
+  await assignPerson(personId, jobsiteId);
   redirect(redirectTo);
+}
+
+/**
+ * DnD-driven variant used by the magnet board — same write, no redirect.
+ * The caller (JobsitesList) updates the UI optimistically and relies on
+ * revalidation to keep things in sync.
+ */
+export async function reassignPersonAction(personId: string, jobsiteId: string | null) {
+  await assignPerson(personId, jobsiteId);
 }

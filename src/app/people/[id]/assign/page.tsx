@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { assignPersonAction } from "@/app/people/actions";
+import { reassignPersonAction } from "@/app/people/actions";
 import { AssignButton } from "@/components/AssignButton";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -45,7 +45,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
       <header className="flex items-baseline justify-between gap-3">
         <h1 className="truncate text-2xl font-semibold tracking-tight">Assign {person.name}</h1>
         <Link href={backTo} className="text-sm text-zinc-500 hover:text-zinc-700">
-          Cancel
+          Done
         </Link>
       </header>
 
@@ -53,7 +53,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
         <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
           <span className="text-sm text-zinc-500">Pull them off this jobsite entirely</span>
           <AssignButton
-            action={assignPersonAction.bind(null, person.id, null, backTo)}
+            action={reassignPersonAction.bind(null, person.id, null)}
             label="Unassign"
             variant="secondary"
           />
@@ -80,12 +80,15 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
                   )}
                 </div>
                 {isCurrent ? (
-                  <span className="rounded-md bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-900">
-                    Currently here
-                  </span>
+                  <Link
+                    href={`/jobsites/${jobsite.id}`}
+                    className="rounded-md bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  >
+                    Currently here →
+                  </Link>
                 ) : (
                   <AssignButton
-                    action={assignPersonAction.bind(null, person.id, jobsite.id, backTo)}
+                    action={reassignPersonAction.bind(null, person.id, jobsite.id)}
                     label="Move here"
                   />
                 )}

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { personInputSchema } from "@/lib/schemas/person";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,10 +85,16 @@ export async function assignPersonAction(
     .from("people")
     .select("current_jobsite_id")
     .eq("id", personId)
+    .is("archived_at", null)
     .maybeSingle();
 
   if (fetchError) {
     throw new Error(`assignPerson lookup failed: ${JSON.stringify(fetchError)}`);
+  }
+  if (!previous) {
+    // The person was deleted (or never existed) between the picker render
+    // and the form submit. Don't silently no-op the write.
+    notFound();
   }
 
   const { error } = await supabase
@@ -105,7 +111,7 @@ export async function assignPersonAction(
   revalidatePath("/jobsites");
   revalidatePath(`/people/${personId}`);
   if (jobsiteId) revalidatePath(`/jobsites/${jobsiteId}`);
-  if (previous?.current_jobsite_id && previous.current_jobsite_id !== jobsiteId) {
+  if (previous.current_jobsite_id && previous.current_jobsite_id !== jobsiteId) {
     revalidatePath(`/jobsites/${previous.current_jobsite_id}`);
   }
 

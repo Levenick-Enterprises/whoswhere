@@ -15,7 +15,7 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
 
   const { data: jobsite, error } = await supabase
     .from("jobsites")
-    .select("id, name, address, notes, archived_at, people(id, name, phone)")
+    .select("id, name, address, notes, archived_at, people(id, name)")
     .eq("id", id)
     .is("archived_at", null)
     .is("people.archived_at", null)

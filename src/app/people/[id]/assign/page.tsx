@@ -14,7 +14,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
   const [{ data: person, error: pErr }, { data: jobsites, error: jErr }] = await Promise.all([
     supabase
       .from("people")
-      .select("id, name, current_jobsite_id")
+      .select("id, name, current_jobsite_id, current_jobsite:current_jobsite_id (archived_at)")
       .eq("id", personId)
       .is("archived_at", null)
       .maybeSingle(),
@@ -30,6 +30,14 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
   }
   if (!person) notFound();
 
+  // A current_jobsite_id pointing at an archived jobsite is treated the same
+  // as unassigned everywhere else in the app — match that here so the picker
+  // doesn't show an "Unassign" affordance for a non-existent assignment.
+  const isAssignedToActiveJobsite =
+    person.current_jobsite_id !== null &&
+    person.current_jobsite !== null &&
+    !person.current_jobsite.archived_at;
+
   const backTo = `/people/${person.id}`;
 
   return (
@@ -41,7 +49,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
         </Link>
       </header>
 
-      {person.current_jobsite_id && (
+      {isAssignedToActiveJobsite && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
           <span className="text-sm text-zinc-500">Pull them off this jobsite entirely</span>
           <AssignButton
@@ -59,7 +67,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
       ) : (
         <ul className="flex flex-col gap-2">
           {jobsites.map((jobsite) => {
-            const isCurrent = person.current_jobsite_id === jobsite.id;
+            const isCurrent = isAssignedToActiveJobsite && person.current_jobsite_id === jobsite.id;
             return (
               <li
                 key={jobsite.id}

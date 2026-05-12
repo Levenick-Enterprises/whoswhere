@@ -23,6 +23,7 @@ Establish what this PR is and isn't, so the rest of the steps have a shared ment
    ```
 2. If `BRANCH == main` or there are no commits ahead of main, stop and tell the user — there's nothing to prep.
 3. Check whether a draft PR already exists for this branch:
+
    ```bash
    gh pr view --json number,isDraft,title,url 2>/dev/null
    ```

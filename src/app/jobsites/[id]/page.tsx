@@ -15,15 +15,18 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
 
   const { data: jobsite, error } = await supabase
     .from("jobsites")
-    .select("id, name, address, notes, archived_at")
+    .select("id, name, address, notes, archived_at, people(id, name, phone)")
     .eq("id", id)
     .is("archived_at", null)
+    .is("people.archived_at", null)
     .maybeSingle();
 
   if (error) {
     throw new Error(`fetch jobsite failed: ${JSON.stringify(error)}`);
   }
   if (!jobsite) notFound();
+
+  const crew = jobsite.people.slice().sort((a, b) => a.name.localeCompare(b.name));
 
   const updateWithId = updateJobsiteAction.bind(null, jobsite.id);
   const deleteWithId = deleteJobsiteAction.bind(null, jobsite.id);
@@ -36,6 +39,34 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
           Back
         </Link>
       </header>
+
+      <Link
+        href={`/jobsites/${jobsite.id}/assign`}
+        className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+      >
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-xs uppercase tracking-wide text-zinc-500">
+            Crew ({crew.length})
+          </span>
+          <span className="text-xs text-zinc-500">
+            {crew.length === 0 ? "Add crew" : "Manage"} →
+          </span>
+        </div>
+        {crew.length === 0 ? (
+          <span className="text-sm text-zinc-500">No one assigned here yet.</span>
+        ) : (
+          <ul className="flex flex-wrap gap-1.5">
+            {crew.map((person) => (
+              <li
+                key={person.id}
+                className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              >
+                {person.name}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Link>
 
       <form action={updateWithId} className="flex flex-col gap-4">
         <FormField label="Name">

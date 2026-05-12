@@ -45,15 +45,18 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         </Link>
       </header>
 
-      {currentJobsite && (
-        <p className="text-sm text-zinc-500">
-          Currently at{" "}
-          <span className="font-medium text-zinc-700 dark:text-zinc-300">
-            {currentJobsite.name}
-          </span>
-          . Reassignment lands in the tap-to-assign flow.
-        </p>
-      )}
+      <Link
+        href={`/people/${person.id}/assign`}
+        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-xs uppercase tracking-wide text-zinc-500">Current jobsite</span>
+          <span className="truncate font-medium">{currentJobsite?.name ?? "Unassigned"}</span>
+        </div>
+        <span className="shrink-0 text-xs text-zinc-500">
+          {currentJobsite ? "Change" : "Assign"} →
+        </span>
+      </Link>
 
       <form action={updateWithId} className="flex flex-col gap-4">
         <FormField label="Name">

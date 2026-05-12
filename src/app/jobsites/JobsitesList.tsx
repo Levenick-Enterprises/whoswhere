@@ -264,7 +264,7 @@ function DraggablePill({ person }: { person: Person }) {
         aria-label={`Reassign ${person.name}`}
         {...attributes}
         {...listeners}
-        className={`touch-pan-y cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing ${
+        className={`touch-none cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${
           isDragging
             ? "opacity-30"
             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"

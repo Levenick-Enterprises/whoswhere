@@ -1,13 +1,19 @@
--- Local-development + stress-test seed data, loaded by `supabase db reset`.
--- Production / remote pushes do not run this file automatically; apply
--- manually with `supabase db query --linked --file supabase/seed.sql`.
+-- Local-development + stress-test seed data, loaded automatically by
+-- `supabase db reset` against the LOCAL database (the only path this file
+-- is intended for).
+--
+-- ⚠ DESTRUCTIVE — the first two statements wipe `people` and `jobsites`
+-- unconditionally. Do NOT apply this file to a remote / production
+-- database that contains real crew data. There is no soft-delete safety
+-- net here; the rows are gone. If you need to load demo data into a
+-- specific remote project, copy the relevant INSERT blocks into a one-off
+-- script and run them with eyes open — don't pipe this file through
+-- `supabase db query --linked --file …`.
 --
 -- ~200 people across 15 Wisconsin-flavored jobsites. Names lean
 -- German / Polish / Scandinavian / Anglo (Wisconsin demographic mix).
 -- Phone numbers are deterministic 555-XXXX. ~10% of crew are
 -- unassigned at any time.
---
--- Re-running is idempotent: wipes first, then re-inserts.
 
 delete from public.people;
 delete from public.jobsites;

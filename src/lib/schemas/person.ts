@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-const nullableTrimmed = z
-  .string()
-  .transform((s) => s.trim())
-  .transform((s) => (s.length === 0 ? null : s))
-  .nullable();
+import { nullableTrimmed } from "./shared";
 
 export const personInputSchema = z.object({
   name: z

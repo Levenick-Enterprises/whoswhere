@@ -11,16 +11,15 @@ export default async function JobsitesPage() {
     .from("jobsites")
     .select("id, name, address, notes, people(id, name)")
     .is("archived_at", null)
+    .is("people.archived_at", null)
     .order("name", { ascending: true });
 
   if (error) {
     throw new Error(`Supabase fetch failed: ${JSON.stringify(error)}`);
   }
 
-  // The embedded people array can include archived people; the typegen doesn't
-  // express that filter so we drop them client-side. Cheaper than a separate
-  // round-trip per jobsite. When realtime / large datasets land, push this
-  // filter into the query.
+  // PostgREST returns embedded rows in insertion order; sort by name client-side
+  // so the crew pills under each jobsite read alphabetically.
   const jobsites = (data ?? []).map((j) => ({
     ...j,
     people: j.people.slice().sort((a, b) => a.name.localeCompare(b.name)),

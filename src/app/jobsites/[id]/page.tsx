@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { DeleteButton } from "@/components/DeleteButton";
-import { FormField, inputClass } from "@/components/FormField";
+import { JobsiteEditForm } from "@/components/JobsiteEditForm";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import { deleteJobsiteAction, updateJobsiteAction } from "../actions";
@@ -68,52 +67,16 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
         )}
       </Link>
 
-      <form action={updateWithId} className="flex flex-col gap-4">
-        <FormField label="Name">
-          <input
-            type="text"
-            name="name"
-            required
-            maxLength={200}
-            defaultValue={jobsite.name}
-            className={inputClass}
-          />
-        </FormField>
-
-        <FormField label="Address">
-          <input
-            type="text"
-            name="address"
-            maxLength={500}
-            defaultValue={jobsite.address ?? ""}
-            className={inputClass}
-          />
-        </FormField>
-
-        <FormField label="Notes">
-          <textarea
-            name="notes"
-            rows={3}
-            maxLength={2000}
-            defaultValue={jobsite.notes ?? ""}
-            className={inputClass}
-          />
-        </FormField>
-
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-        >
-          Save
-        </button>
-      </form>
-
-      <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        <DeleteButton
-          action={deleteWithId}
-          confirmMessage={`Delete ${jobsite.name}? You can restore from Trash.`}
-        />
-      </div>
+      <JobsiteEditForm
+        jobsite={{
+          id: jobsite.id,
+          name: jobsite.name,
+          address: jobsite.address,
+          notes: jobsite.notes,
+        }}
+        updateAction={updateWithId}
+        deleteAction={deleteWithId}
+      />
     </section>
   );
 }

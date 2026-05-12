@@ -38,7 +38,7 @@ export async function updatePersonAction(id: string, formData: FormData) {
 
   revalidatePath("/people");
   revalidatePath(`/people/${id}`);
-  redirect("/people");
+  redirect(`/people/${id}`);
 }
 
 export async function deletePersonAction(id: string) {

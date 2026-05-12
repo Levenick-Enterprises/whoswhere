@@ -252,6 +252,7 @@ function DropZone({
 }
 
 function DraggablePill({ person }: { person: Person }) {
+  const router = useRouter();
   const { attributes, isDragging, listeners, setNodeRef } = useDraggable({
     id: person.id,
   });
@@ -261,7 +262,8 @@ function DraggablePill({ person }: { person: Person }) {
       <button
         ref={setNodeRef}
         type="button"
-        aria-label={`Reassign ${person.name}`}
+        aria-label={`Open ${person.name}'s record. Long-press to drag and reassign.`}
+        onClick={() => router.push(`/people/${person.id}`)}
         {...attributes}
         {...listeners}
         className={`touch-none cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${

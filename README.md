@@ -20,8 +20,8 @@ pnpm dev                           # start the dev server at http://localhost:30
 Env vars (copy `.env.example` → `.env.local`):
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe; starts with `sb_publishable_`)
+- `SUPABASE_SECRET_KEY` (server-side only; starts with `sb_secret_`)
 
 ## Scripts
 

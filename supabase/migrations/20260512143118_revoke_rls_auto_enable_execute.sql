@@ -1,0 +1,12 @@
+-- The auto-RLS feature (enabled at project creation) installs an event
+-- trigger function `public.rls_auto_enable()` that enables RLS on every
+-- newly created table in the public schema. The function is SECURITY
+-- DEFINER, and because it lives in the `public` schema it's reachable
+-- via the Data API at `/rest/v1/rpc/rls_auto_enable`.
+--
+-- Postgres grants EXECUTE on new functions to the PUBLIC role by default,
+-- which transitively exposes the function to anon / authenticated / any
+-- future role. Revoke EXECUTE from PUBLIC so only explicitly-granted
+-- roles (postgres / the function owner) can call it. The DDL event
+-- trigger continues to fire because it executes as the function owner.
+revoke execute on function public.rls_auto_enable() from public;

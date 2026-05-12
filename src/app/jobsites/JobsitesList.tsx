@@ -14,6 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { startTransition, useMemo, useOptimistic, useState, type ReactNode } from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
@@ -31,6 +32,7 @@ type Person = {
 type OptimisticUpdate = { personId: string; jobsiteId: string | null };
 
 export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people: Person[] }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
 
@@ -102,7 +104,15 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
 
     startTransition(async () => {
       applyOptimisticUpdate({ personId, jobsiteId: targetJobsiteId });
-      await reassignPersonAction(personId, targetJobsiteId);
+      try {
+        await reassignPersonAction(personId, targetJobsiteId);
+      } catch (err) {
+        // The optimistic state has already jumped the pill to its new spot.
+        // On failure, force a server re-render so the UI reverts to truth
+        // rather than leaving the lie in place.
+        console.error("reassignPerson failed; refreshing from server", err);
+        router.refresh();
+      }
     });
   }
 
@@ -254,7 +264,7 @@ function DraggablePill({ person }: { person: Person }) {
         aria-label={`Reassign ${person.name}`}
         {...attributes}
         {...listeners}
-        className={`touch-none cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing ${
+        className={`touch-pan-y cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing ${
           isDragging
             ? "opacity-30"
             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"

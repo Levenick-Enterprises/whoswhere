@@ -105,22 +105,11 @@ async function assignPerson(personId: string, jobsiteId: string | null) {
 }
 
 /**
- * Form-driven variant used by the picker pages — redirects back to
- * `redirectTo` after the write completes.
- */
-export async function assignPersonAction(
-  personId: string,
-  jobsiteId: string | null,
-  redirectTo: string,
-) {
-  await assignPerson(personId, jobsiteId);
-  redirect(redirectTo);
-}
-
-/**
- * DnD-driven variant used by the magnet board — same write, no redirect.
- * The caller (JobsitesList) updates the UI optimistically and relies on
- * revalidation to keep things in sync.
+ * Sets a person's current_jobsite_id (or null to unassign). No redirect —
+ * callers stay on their current page and rely on revalidatePath for
+ * downstream refresh. The DnD magnet board uses this with useOptimistic;
+ * the assign pickers use it via a plain form submit and let the picker
+ * page re-render in place after the write.
  */
 export async function reassignPersonAction(personId: string, jobsiteId: string | null) {
   await assignPerson(personId, jobsiteId);

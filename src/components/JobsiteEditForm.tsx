@@ -7,7 +7,7 @@ import { DetailIconRow } from "@/components/DetailIconRow";
 import { EditModeControls } from "@/components/EditModeControls";
 import { FormField, inputClass } from "@/components/FormField";
 import { FileTextIcon, MapPinIcon } from "@/components/icons";
-import { mapsHref } from "@/lib/links";
+import { MapsLinkButton } from "@/components/MapsLinkButton";
 
 type Jobsite = {
   id: string;
@@ -59,13 +59,20 @@ function ViewFields({ jobsite, onEdit }: { jobsite: Jobsite; onEdit: () => void 
       {hasAny ? (
         <div className="flex flex-col gap-1">
           {jobsite.address && (
-            <DetailIconRow
-              icon={MapPinIcon}
-              href={mapsHref(jobsite.address)}
-              label={`Open ${jobsite.address} in Maps`}
+            <MapsLinkButton
+              address={jobsite.address}
+              ariaLabel={`Open ${jobsite.address} in maps — choose Apple Maps or Google Maps`}
+              className="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-base transition-colors hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-zinc-900 dark:active:bg-zinc-800"
             >
-              {jobsite.address}
-            </DetailIconRow>
+              <MapPinIcon
+                className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400"
+                width={20}
+                height={20}
+              />
+              <span className="min-w-0 break-words text-zinc-900 dark:text-zinc-100">
+                {jobsite.address}
+              </span>
+            </MapsLinkButton>
           )}
           {jobsite.notes && (
             <DetailIconRow icon={FileTextIcon} label="Notes">

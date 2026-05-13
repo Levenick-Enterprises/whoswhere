@@ -25,7 +25,7 @@ import {
 } from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
-import { mapsHref } from "@/lib/links";
+import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
@@ -193,14 +193,13 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                   title={jobsite.name}
                   subtitle={
                     jobsite.address ? (
-                      <a
-                        href={mapsHref(jobsite.address)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Open ${jobsite.name} in Maps`}
-                        className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                      <MapsLinkButton
+                        address={jobsite.address}
+                        ariaLabel={`Open ${jobsite.address} in maps — choose Apple Maps or Google Maps`}
+                        className="text-left underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
                       >
                         {jobsite.address}
-                      </a>
+                      </MapsLinkButton>
                     ) : undefined
                   }
                   count={sitePeople.length}

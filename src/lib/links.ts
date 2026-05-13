@@ -7,8 +7,14 @@ export function telHref(phone: string): string | null {
   return normalized ? `tel:${normalized}` : null;
 }
 
-/** Universal Google Maps search URL — opens Apple Maps on iOS via the system
- * URL handoff, Google Maps elsewhere. Works on both desktop and mobile. */
-export function mapsHref(address: string): string {
+/** Apple Maps URL for an address. iOS routes this to the Apple Maps app
+ * natively; on Android/desktop it lands on Apple's web fallback. */
+export function appleMapsHref(address: string): string {
+  return `https://maps.apple.com/?q=${encodeURIComponent(address)}`;
+}
+
+/** Google Maps universal search URL. iOS sends this straight to Google Maps
+ * (app if installed, web otherwise); Android sends to the Google Maps app. */
+export function googleMapsHref(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }

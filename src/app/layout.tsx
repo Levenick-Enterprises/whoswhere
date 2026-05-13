@@ -4,16 +4,17 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { ThemeManager } from "@/components/ThemeManager";
+import { THEME_STORAGE_KEY } from "@/lib/prefsKeys";
 
 import "./globals.css";
 
 // Runs synchronously before paint so the `.dark` class is on <html> on the
-// very first frame — prevents a flash of the wrong theme. Kept in sync with
-// ThemeManager / usePrefs (storage key + value set).
+// very first frame — prevents a flash of the wrong theme. Reads the same
+// storage key used by usePrefs so the two can't drift.
 const themeBootstrapScript = `
 (function () {
   try {
-    var stored = localStorage.getItem('whoswhere:theme');
+    var stored = localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
     var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     var isDark = stored === 'dark' || ((stored !== 'light') && systemDark);
     if (isDark) document.documentElement.classList.add('dark');

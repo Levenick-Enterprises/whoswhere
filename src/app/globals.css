@@ -11,7 +11,9 @@
   --foreground: #171717;
 }
 
-.dark {
+/* Scoped to <html> specifically so a stray .dark class on an unrelated element
+ * can't accidentally retheme its subtree. */
+:root.dark {
   --background: #0a0a0a;
   --foreground: #ededed;
 }

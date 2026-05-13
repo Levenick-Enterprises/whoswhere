@@ -2,6 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
+import { DRAG_STORAGE_KEY, THEME_STORAGE_KEY } from "@/lib/prefsKeys";
+
 export type DragSpeed = "snappy" | "balanced" | "deliberate";
 
 export const DRAG_SPEEDS: DragSpeed[] = ["snappy", "balanced", "deliberate"];
@@ -15,9 +17,6 @@ export const DRAG_DELAY_MS: Record<DragSpeed, number> = {
 export type Theme = "light" | "dark" | "system";
 
 export const THEMES: Theme[] = ["light", "dark", "system"];
-
-export const DRAG_STORAGE_KEY = "whoswhere:dragSpeed";
-export const THEME_STORAGE_KEY = "whoswhere:theme";
 
 const DRAG_DEFAULT: DragSpeed = "balanced";
 const THEME_DEFAULT: Theme = "system";
@@ -45,18 +44,35 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
+// localStorage can throw (SecurityError in private mode, quota errors, or when
+// the browser disables storage entirely). Swallow it: degrade to defaults so a
+// render-time `getSnapshot()` call never crashes the tree.
+function safeGet(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
 function readDrag(): DragSpeed {
-  const stored = window.localStorage.getItem(DRAG_STORAGE_KEY);
+  const stored = safeGet(DRAG_STORAGE_KEY);
   return isDragSpeed(stored) ? stored : DRAG_DEFAULT;
 }
 
 function readTheme(): Theme {
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  const stored = safeGet(THEME_STORAGE_KEY);
   return isTheme(stored) ? stored : THEME_DEFAULT;
 }
 
 function writeAndBroadcast(key: string, value: string): void {
-  window.localStorage.setItem(key, value);
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage unavailable — the value won't persist across reloads, but
+    // in-tab subscribers still get notified so the UI reflects the choice
+    // for the rest of this session.
+  }
   window.dispatchEvent(new Event(PREFS_CHANGE_EVENT));
 }
 

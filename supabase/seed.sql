@@ -1,21 +1,122 @@
--- Local-development seed data, loaded by `supabase db reset`.
--- Production / remote pushes do not run this file.
+-- Local-development + stress-test seed data, loaded automatically by
+-- `supabase db reset` against the LOCAL database (the only path this file
+-- is intended for).
 --
--- Sample crew + jobsite data so the list-view UI shows something
--- meaningful before the CRUD flow lands. Delete or replace at will.
+-- ⚠ DESTRUCTIVE — the first two statements wipe `people` and `jobsites`
+-- unconditionally. Do NOT apply this file to a remote / production
+-- database that contains real crew data. There is no soft-delete safety
+-- net here; the rows are gone. If you need to load demo data into a
+-- specific remote project, copy the relevant INSERT blocks into a one-off
+-- script and run them with eyes open — don't pipe this file through
+-- `supabase db query --linked --file …`.
+--
+-- ~200 people across 15 Wisconsin-flavored jobsites. Names lean
+-- German / Polish / Scandinavian / Anglo (Wisconsin demographic mix).
+-- Phone numbers are deterministic 555-XXXX. ~10% of crew are
+-- unassigned at any time.
 
+delete from public.people;
+delete from public.jobsites;
+
+-- ──────────────────────────────────────────────────────────────────────
+-- Jobsites — 15 sites scattered across Wisconsin.
+-- ──────────────────────────────────────────────────────────────────────
 insert into public.jobsites (id, name, address, notes) values
-  ('11111111-1111-1111-1111-111111111111', 'Smith Residence', '1834 Maple St, Springfield', 'Kitchen + bath remodel; client home most days.'),
-  ('22222222-2222-2222-2222-222222222222', 'Downtown Office Build', '210 Market Ave, Floor 4', 'Tenant fit-out; site access via freight elevator.'),
-  ('33333333-3333-3333-3333-333333333333', 'Hwy 12 Overpass', 'Mile marker 47, Hwy 12', 'Lane closure window: 9am-3pm weekdays.'),
-  ('44444444-4444-4444-4444-444444444444', 'Lincoln Elementary', '500 Cedar Rd', 'Summer-only access; finish by Aug 15.');
+  ('00000000-0000-0000-0000-000000000001', 'Smith Residence', '1834 Maple St, Madison', 'Kitchen + bath remodel; client home most days.'),
+  ('00000000-0000-0000-0000-000000000002', 'Downtown Office Build', '210 Market Ave, Floor 4, Milwaukee', 'Tenant fit-out; site access via freight elevator.'),
+  ('00000000-0000-0000-0000-000000000003', 'Hwy 12 Overpass', 'Mile marker 47, Hwy 12', 'Lane closure window: 9am-3pm weekdays.'),
+  ('00000000-0000-0000-0000-000000000004', 'Lincoln Elementary', '500 Cedar Rd, Green Bay', 'Summer-only access; finish by Aug 15.'),
+  ('00000000-0000-0000-0000-000000000005', 'Lake Geneva Resort', '1145 Shore Dr, Lake Geneva', 'Lakefront cabana expansion; high-season deadline.'),
+  ('00000000-0000-0000-0000-000000000006', 'Sheboygan Cheese Plant', '2701 Industrial Pkwy, Sheboygan', 'Refrigerated zone; food-safety PPE required.'),
+  ('00000000-0000-0000-0000-000000000007', 'Oshkosh Airport Hangar', 'Wittman Regional, Bay 12', 'Active airfield; coordinate with tower for crane lifts.'),
+  ('00000000-0000-0000-0000-000000000008', 'Eau Claire Hospital Wing', '1400 Bellinger St, Eau Claire', 'Patient-occupied building; noise window 7am-5pm only.'),
+  ('00000000-0000-0000-0000-000000000009', 'La Crosse Riverfront Lofts', '88 Riverside N, La Crosse', 'Mixed-use; ground-floor retail finishing now.'),
+  ('00000000-0000-0000-0000-000000000010', 'Wausau Distribution Center', '6200 Stewart Ave, Wausau', 'Tilt-up panels going up next week.'),
+  ('00000000-0000-0000-0000-000000000011', 'Appleton Public Works', '1819 Wisconsin Ave, Appleton', 'Municipal contract; weekly progress meetings Tue 8am.'),
+  ('00000000-0000-0000-0000-000000000012', 'Kenosha Marina Pavilion', 'Harbor Park, Kenosha', 'Tidal work — schedule around water levels.'),
+  ('00000000-0000-0000-0000-000000000013', 'Janesville School Gym', '2400 S Crosby Ave, Janesville', 'Roof + bleacher replacement.'),
+  ('00000000-0000-0000-0000-000000000014', 'Racine Brewery Expansion', '524 6th St, Racine', 'Stainless install; certified welders only.'),
+  ('00000000-0000-0000-0000-000000000015', 'Stevens Point Mall Reno', '5300 US-10, Stevens Point', 'Phased — anchor stores stay open during work.');
 
-insert into public.people (name, phone, current_jobsite_id, notes) values
-  ('Alice Chen', '555-0142', '11111111-1111-1111-1111-111111111111', 'Tile + finish carpentry.'),
-  ('Bob Martinez', '555-0173', '11111111-1111-1111-1111-111111111111', null),
-  ('Carlos Rivera', '555-0188', '22222222-2222-2222-2222-222222222222', 'Foreman on Downtown.'),
-  ('Dave Kim', '555-0211', '22222222-2222-2222-2222-222222222222', null),
-  ('Eli Johnson', '555-0254', '33333333-3333-3333-3333-333333333333', 'CDL; runs the loader.'),
-  ('Frank Wu', '555-0267', '33333333-3333-3333-3333-333333333333', null),
-  ('Grace Patel', '555-0290', null, 'Out this week.'),
-  ('Henry Davis', '555-0312', '44444444-4444-4444-4444-444444444444', null);
+-- ──────────────────────────────────────────────────────────────────────
+-- People — generated via CTE cross-join over first/last name pools.
+-- Deterministic ordering via md5 hash (so re-runs of this seed produce
+-- the same 200 people; not "random" but visually well-mixed).
+-- ──────────────────────────────────────────────────────────────────────
+with first_names(name) as (
+  values
+    -- Anglo (older, generational Midwest)
+    ('Wayne'), ('Dale'), ('Doug'), ('Greg'), ('Curt'), ('Bruce'), ('Brett'),
+    ('Roger'), ('Stan'), ('Don'), ('Glen'), ('Mel'), ('Vern'), ('Lloyd'),
+    ('Wally'), ('Howie'), ('Rich'), ('Larry'), ('Gary'), ('Terry'),
+    ('Jerry'), ('Tom'), ('Bob'), ('Mike'), ('Steve'), ('Dave'), ('Bill'),
+    ('Jim'), ('John'), ('Frank'), ('Hank'),
+    -- Middle-generation
+    ('Brian'), ('Scott'), ('Mark'), ('Kurt'), ('Brad'), ('Chad'), ('Eric'),
+    ('Tim'), ('Joel'), ('Karl'),
+    -- Scandinavian heritage
+    ('Hans'), ('Sven'), ('Lars'), ('Magnus'), ('Klaus'), ('Ole'), ('Erik'),
+    ('Per'), ('Henrik'), ('Bjorn'), ('Knut'), ('Olaf'), ('Anders'), ('Stefan'),
+    -- Polish heritage
+    ('Wojciech'), ('Tomasz'), ('Piotr'), ('Marek'), ('Jacek'), ('Karol'), ('Pawel'),
+    -- Younger
+    ('Tyler'), ('Trevor'), ('Travis'), ('Brody'), ('Cole'), ('Tucker'),
+    ('Cody'), ('Caleb'), ('Hunter'), ('Bryce'), ('Tanner'), ('Logan'),
+    ('Connor'),
+    -- Women on the crew
+    ('Linda'), ('Diane'), ('Karen'), ('Cindy'), ('Patty'), ('Jenny'),
+    ('Beth'), ('Susie'), ('Lori'), ('Ashley'), ('Brittany'), ('Heather'),
+    ('Stephanie'), ('Megan'), ('Whitney'),
+    ('Astrid'), ('Ingrid'), ('Helga'), ('Sigrid'), ('Gerda'), ('Annika'),
+    ('Greta'), ('Marta'), ('Anya'), ('Eva'), ('Klara')
+),
+last_names(name) as (
+  values
+    -- German
+    ('Schmidt'), ('Mueller'), ('Weber'), ('Fischer'), ('Wagner'), ('Becker'),
+    ('Schulz'), ('Hoffmann'), ('Bauer'), ('Schroeder'), ('Klein'), ('Wolf'),
+    ('Schwarz'), ('Zimmermann'), ('Braun'), ('Krueger'), ('Hartmann'),
+    ('Lange'), ('Schmitt'), ('Werner'),
+    -- Polish
+    ('Kowalski'), ('Nowak'), ('Wisniewski'), ('Wojcik'), ('Kowalczyk'),
+    ('Kaminski'), ('Lewandowski'), ('Zielinski'), ('Szymanski'), ('Wozniak'),
+    ('Mazur'), ('Kwiatkowski'),
+    -- Scandinavian
+    ('Olson'), ('Anderson'), ('Hansen'), ('Larson'), ('Nelson'), ('Erickson'),
+    ('Peterson'), ('Johnson'), ('Carlson'), ('Bergstrom'), ('Lindquist'),
+    ('Hagen'), ('Sundberg'), ('Bjornson'), ('Nilsen'),
+    -- Anglo
+    ('Lewis'), ('Walsh'), ('Murphy'), ('Kelly'), ('Sullivan'), ('Cooper'),
+    ('Brown'), ('Davis'), ('Wilson'), ('Thompson'), ('Miller'), ('Moore'),
+    ('Taylor')
+),
+all_combos as (
+  select
+    f.name || ' ' || l.name as full_name,
+    md5(f.name || '/' || l.name) as h
+  from first_names f, last_names l
+),
+sample as (
+  select
+    full_name,
+    row_number() over (order by h) as rn
+  from all_combos
+  order by h
+  limit 200
+),
+js as (
+  select id, row_number() over (order by name) as rn
+  from public.jobsites
+)
+insert into public.people (name, phone, current_jobsite_id)
+select
+  s.full_name,
+  -- Deterministic 555-XXXX number per row.
+  '555-' || lpad((((s.rn * 7919) % 9000) + 1000)::text, 4, '0'),
+  -- ~11% unassigned (every 9th row); the rest spread evenly across the 15
+  -- jobsites by rn modulo.
+  case
+    when s.rn % 9 = 0 then null
+    else (select id from js where js.rn = ((s.rn % 15) + 1))
+  end
+from sample s;

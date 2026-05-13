@@ -76,6 +76,24 @@ export default async function MorePage() {
           {trashTotal}
         </span>
       </Link>
+
+      <p className="pt-2 text-center text-xs tabular-nums text-zinc-400 dark:text-zinc-600">
+        {buildLabel()}
+      </p>
     </section>
   );
+}
+
+/** Short build identifier rendered in the More menu footer. Used to verify a
+ * specific deploy is live on a given hostname. The NEXT_PUBLIC_BUILD_* values
+ * are mapped from Vercel's VERCEL_GIT_* env vars in next.config.ts; Next.js
+ * inlines them at compile time so they survive force-dynamic rendering. */
+function buildLabel(): string {
+  const sha = process.env.NEXT_PUBLIC_BUILD_SHA?.slice(0, 7) || null;
+  const message = process.env.NEXT_PUBLIC_BUILD_MESSAGE ?? "";
+  const prNumber = message.match(/\(#(\d+)\)/)?.[1];
+
+  if (prNumber && sha) return `Build: ${prNumber} (${sha})`;
+  if (sha) return `Build: ${sha}`;
+  return "Build: local";
 }

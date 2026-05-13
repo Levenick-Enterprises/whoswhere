@@ -13,6 +13,16 @@ const devOrigins =
 
 const nextConfig: NextConfig = {
   ...(devOrigins.length > 0 ? { allowedDevOrigins: devOrigins } : {}),
+  // Expose git metadata to the bundle so the /more footer can render a
+  // build label. Next.js's `env` block runs at compile time and inlines
+  // these as string literals everywhere `process.env.NEXT_PUBLIC_BUILD_*`
+  // appears — works regardless of whether the page is force-dynamic.
+  // Vercel sets VERCEL_GIT_* natively on the dev project's git deploys;
+  // deploy-prod.yml sets them explicitly for tenant CLI deploys.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+    NEXT_PUBLIC_BUILD_MESSAGE: process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "",
+  },
 };
 
 export default nextConfig;

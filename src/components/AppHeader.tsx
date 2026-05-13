@@ -1,14 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const moreHref = "/more";
 const morePaths = ["/more", "/trash"];
 
 export function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+  const onMorePage = pathname === moreHref;
   const moreActive = morePaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  // Re-tapping the hamburger while on /more closes the menu, mirroring how
+  // toggleable nav drawers feel. Fall back to /jobsites if there's no history
+  // (e.g. /more is the entry point on a fresh tab).
+  const handleMoreClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!onMorePage) return;
+    event.preventDefault();
+    if (window.history.length > 1) router.back();
+    else router.push("/jobsites");
+  };
 
   return (
     <header
@@ -25,8 +37,9 @@ export function AppHeader() {
         </Link>
         <Link
           href={moreHref}
-          aria-label="More"
-          aria-current={pathname === moreHref ? "page" : undefined}
+          onClick={handleMoreClick}
+          aria-label={onMorePage ? "Close menu" : "More"}
+          aria-current={onMorePage ? "page" : undefined}
           className={`flex h-9 w-9 items-center justify-center rounded-md transition-colors ${
             moreActive
               ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"

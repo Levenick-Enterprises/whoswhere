@@ -4,7 +4,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useDraggable,
   useDroppable,
@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
+import { useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
 
@@ -50,12 +51,13 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
       state.map((p) => (p.id === personId ? { ...p, current_jobsite_id: jobsiteId } : p)),
   );
 
+  // Touch delay is user-configurable on /more (snappy / balanced / deliberate);
+  // MouseSensor (vs PointerSensor) keeps the desktop path snappy without ever
+  // dispatching for touches, so the TouchSensor delay actually gates phones.
+  const dragDelayMs = useDragDelayMs();
   const sensors = useSensors(
-    // Tiny pointer movement initiates a drag — keeps mouse-based DnD snappy
-    // without stealing clicks from links and buttons.
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    // Long-press to drag on touch. Without a delay, the page can't scroll.
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: dragDelayMs, tolerance: 12 } }),
     useSensor(KeyboardSensor),
   );
 
@@ -269,11 +271,11 @@ function DraggablePill({ person, onOpen }: { person: Person; onOpen: (id: string
       <button
         ref={setNodeRef}
         type="button"
-        aria-label={`Open ${person.name}'s record. Long-press to drag and reassign.`}
+        aria-label={`Open ${person.name}'s record. Hold to drag and reassign.`}
         onClick={() => onOpen(person.id)}
         {...attributes}
         {...listeners}
-        className={`touch-none cursor-grab select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${
+        className={`cursor-grab touch-pan-y select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${
           isDragging
             ? "opacity-30"
             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"

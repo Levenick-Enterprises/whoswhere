@@ -263,7 +263,7 @@ function DropZone({
           {count} {count === 1 ? "person" : "people"}
         </span>
       </div>
-      {subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}
+      {subtitle && <div className="text-sm text-zinc-500">{subtitle}</div>}
       <ul className="flex flex-wrap gap-1.5">
         {children}
         {count === 0 && <li className="text-xs italic text-zinc-400">No one here.</li>}

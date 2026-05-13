@@ -42,24 +42,27 @@ export function MapsLinkButton({
           // default — it only closes on ESC.
           if (e.target === dialogRef.current) close();
         }}
-        className="rounded-lg border border-zinc-200 bg-white p-4 text-zinc-900 shadow-xl backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+        // m-auto restores the centering that Tailwind's preflight nukes (it
+        // resets margin to 0 on every element, breaking <dialog>'s default
+        // showModal() positioning).
+        className="m-auto w-[min(20rem,90vw)] rounded-xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-xl backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
       >
-        <h2 className="mb-3 max-w-xs text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Open in…
         </h2>
-        <p className="mb-3 max-w-xs text-base text-zinc-900 dark:text-zinc-100">{address}</p>
-        <div className="flex min-w-[14rem] flex-col gap-2">
+        <p className="mb-5 text-base font-medium text-zinc-900 dark:text-zinc-100">{address}</p>
+        <div className="flex flex-col gap-2">
           <a
             href={appleMapsHref(address)}
             onClick={close}
-            className="rounded-lg bg-zinc-950 px-4 py-2 text-center text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="rounded-lg bg-zinc-950 px-4 py-3 text-center text-base font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
           >
             Apple Maps
           </a>
           <a
             href={googleMapsHref(address)}
             onClick={close}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-center text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-3 text-center text-base font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
           >
             Google Maps
           </a>

@@ -68,7 +68,7 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) 
             <DetailIconRow
               icon={PhoneIcon}
               href={telHref(person.phone)}
-              label={`Call ${person.name}`}
+              label={`Call ${person.name} at ${person.phone}`}
             >
               {person.phone}
             </DetailIconRow>

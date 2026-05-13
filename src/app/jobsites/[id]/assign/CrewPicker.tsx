@@ -46,7 +46,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
       <input
         type="search"
         inputMode="search"
-        placeholder="Search names, phones, or jobsites…"
+        placeholder="Search names, positions, phones, or jobsites…"
         aria-label="Search crew"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

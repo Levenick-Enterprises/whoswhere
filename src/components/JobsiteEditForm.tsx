@@ -62,7 +62,7 @@ function ViewFields({ jobsite, onEdit }: { jobsite: Jobsite; onEdit: () => void 
             <DetailIconRow
               icon={MapPinIcon}
               href={mapsHref(jobsite.address)}
-              label={`Open ${jobsite.name} in Maps`}
+              label={`Open ${jobsite.address} in Maps`}
             >
               {jobsite.address}
             </DetailIconRow>

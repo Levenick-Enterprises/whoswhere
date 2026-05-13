@@ -29,8 +29,9 @@ export async function createSupabaseServerClient() {
       },
       setAll(cookiesToSet) {
         try {
-          cookiesToSet.forEach(({ name, value, options }: { name: string; value: string; options: CookieOptions }) =>
-            cookieStore.set(name, value, options),
+          cookiesToSet.forEach(
+            ({ name, value, options }: { name: string; value: string; options: CookieOptions }) =>
+              cookieStore.set(name, value, options),
           );
         } catch {
           // Called from a Server Component — Next.js disallows cookie writes

@@ -68,6 +68,15 @@ jobs:
           fi
           echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
 
+      - name: Capture git metadata for build label
+        # Vercel sets VERCEL_GIT_COMMIT_SHA / _MESSAGE natively on git-triggered
+        # builds; the CLI-driven prod deploy needs them set explicitly so the
+        # build can stamp the More-menu footer with the commit + PR number.
+        id: meta
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "message=$(git log -1 --pretty=%s)" >> "$GITHUB_OUTPUT"
+
       - name: Pull Vercel project settings
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -75,6 +84,9 @@ jobs:
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build for production
+        env:
+          VERCEL_GIT_COMMIT_SHA: ${{ steps.meta.outputs.sha }}
+          VERCEL_GIT_COMMIT_MESSAGE: ${{ steps.meta.outputs.message }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to production

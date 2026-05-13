@@ -76,6 +76,24 @@ export default async function MorePage() {
           {trashTotal}
         </span>
       </Link>
+
+      <p className="pt-2 text-center text-xs tabular-nums text-zinc-400 dark:text-zinc-600">
+        {buildLabel()}
+      </p>
     </section>
   );
+}
+
+/** Short build identifier rendered in the More menu footer. Used to verify a
+ * specific deploy is live on a given hostname — Vercel sets the git env vars
+ * during builds (natively on the dev project's git deploys, explicitly via
+ * deploy-prod.yml for tenant prod deploys). */
+function buildLabel(): string {
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8);
+  const message = process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "";
+  const prNumber = message.match(/\(#(\d+)\)/)?.[1];
+
+  if (prNumber && sha) return `Build: ${prNumber} (${sha})`;
+  if (sha) return `Build: ${sha}`;
+  return "Build: local";
 }

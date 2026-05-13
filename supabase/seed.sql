@@ -108,9 +108,34 @@ js as (
   select id, row_number() over (order by name) as rn
   from public.jobsites
 )
-insert into public.people (name, phone, current_jobsite_id)
+insert into public.people (name, position, phone, current_jobsite_id)
 select
   s.full_name,
+  -- Position distribution over 20 buckets, weighted toward common trades:
+  --   2/20 Foreman, 4/20 Carpenter, 3/20 Laborer, 1/20 each of 11 other trades.
+  --   `rn * 31 % 20` gives a stable spread across the 200 rows.
+  case ((s.rn * 31) % 20)
+    when 0 then 'Foreman'
+    when 1 then 'Foreman'
+    when 2 then 'Carpenter'
+    when 3 then 'Carpenter'
+    when 4 then 'Carpenter'
+    when 5 then 'Carpenter'
+    when 6 then 'Laborer'
+    when 7 then 'Laborer'
+    when 8 then 'Laborer'
+    when 9 then 'Electrician'
+    when 10 then 'Plumber'
+    when 11 then 'Mason'
+    when 12 then 'Roofer'
+    when 13 then 'Painter'
+    when 14 then 'Equipment Operator'
+    when 15 then 'Welder'
+    when 16 then 'Concrete Finisher'
+    when 17 then 'Drywaller'
+    when 18 then 'Crane Operator'
+    when 19 then 'Apprentice'
+  end,
   -- Deterministic 555-XXXX number per row.
   '555-' || lpad((((s.rn * 7919) % 9000) + 1000)::text, 4, '0'),
   -- ~11% unassigned (every 9th row); the rest spread evenly across the 15

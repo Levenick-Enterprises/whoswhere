@@ -27,7 +27,17 @@ export default function NewPersonPage() {
           />
         </FormField>
 
-        <FormField label="Phone" hint="Free-form. Click-to-call lands later (#4).">
+        <FormField label="Position">
+          <input
+            type="text"
+            name="position"
+            maxLength={100}
+            placeholder="e.g. Foreman, Carpenter, Laborer"
+            className={inputClass}
+          />
+        </FormField>
+
+        <FormField label="Phone" hint="Tap-to-call from the detail view + people list.">
           <input
             type="tel"
             name="phone"

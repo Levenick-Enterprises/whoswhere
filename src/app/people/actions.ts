@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 function parseFormData(formData: FormData) {
   return personInputSchema.parse({
     name: formData.get("name") ?? "",
+    position: formData.get("position") ?? "",
     phone: formData.get("phone") ?? "",
     notes: formData.get("notes") ?? "",
   });

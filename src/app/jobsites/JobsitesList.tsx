@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
+import { mapsHref } from "@/lib/links";
 import { useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
@@ -190,7 +191,18 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                 <DropZone
                   id={jobsite.id}
                   title={jobsite.name}
-                  subtitle={jobsite.address ?? undefined}
+                  subtitle={
+                    jobsite.address ? (
+                      <a
+                        href={mapsHref(jobsite.address)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Open ${jobsite.name} in Maps`}
+                        className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                      >
+                        {jobsite.address}
+                      </a>
+                    ) : undefined
+                  }
                   count={sitePeople.length}
                   href={`/jobsites/${jobsite.id}`}
                 >
@@ -221,7 +233,7 @@ function DropZone({
 }: {
   id: string;
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   count: number;
   href?: string;
   children: ReactNode;

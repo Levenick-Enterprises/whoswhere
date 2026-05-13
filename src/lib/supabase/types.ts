@@ -69,6 +69,7 @@ export type Database = {
           name: string;
           notes: string | null;
           phone: string | null;
+          position: string | null;
         };
         Insert: {
           archived_at?: string | null;
@@ -78,6 +79,7 @@ export type Database = {
           name: string;
           notes?: string | null;
           phone?: string | null;
+          position?: string | null;
         };
         Update: {
           archived_at?: string | null;
@@ -87,6 +89,7 @@ export type Database = {
           name?: string;
           notes?: string | null;
           phone?: string | null;
+          position?: string | null;
         };
         Relationships: [
           {

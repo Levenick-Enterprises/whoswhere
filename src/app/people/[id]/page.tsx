@@ -15,7 +15,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
   const { data: person, error } = await supabase
     .from("people")
     .select(
-      "id, name, phone, notes, archived_at, current_jobsite:current_jobsite_id (id, name, archived_at)",
+      "id, name, position, phone, notes, archived_at, current_jobsite:current_jobsite_id (id, name, archived_at)",
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -61,6 +61,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         person={{
           id: person.id,
           name: person.name,
+          position: person.position,
           phone: person.phone,
           notes: person.notes,
         }}

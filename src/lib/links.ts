@@ -1,10 +1,12 @@
-/** `tel:` URI for a phone number, or `null` if the input has no characters
- * RFC 3966 considers dialable (digits, `+`, `-`, `*`, `#`, `(`, `)`, `.`).
- * Callers should suppress the link when this returns null so we don't render
- * a tappable element that opens the dialer with an empty number. */
+/** `tel:` URI for a phone number, or `null` when the input has no actual
+ * digits after stripping non-dialable characters. The structural symbols
+ * (`+`, `-`, `*`, `#`, `(`, `)`, `.`) are allowed by RFC 3966 but on their
+ * own they aren't a phone number — guarding on `\d` prevents inputs like
+ * "----" or "+()" from producing a tappable but broken call target. */
 export function telHref(phone: string): string | null {
   const normalized = phone.replace(/[^\d+\-*#().]/g, "");
-  return normalized ? `tel:${normalized}` : null;
+  if (!/\d/.test(normalized)) return null;
+  return `tel:${normalized}`;
 }
 
 /** Apple Maps URL for an address. iOS routes this to the Apple Maps app

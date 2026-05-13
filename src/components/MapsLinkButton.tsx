@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 
 import { appleMapsHref, googleMapsHref } from "@/lib/links";
 
@@ -25,8 +25,16 @@ export function MapsLinkButton({
   children: ReactNode;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const addressId = useId();
 
-  const open = () => dialogRef.current?.showModal();
+  // Guard against InvalidStateError when a fast double-tap fires the handler
+  // before the first showModal() has fully opened. `dialog.open` reflects the
+  // current state and is false on a freshly-mounted dialog.
+  const open = () => {
+    const d = dialogRef.current;
+    if (d && !d.open) d.showModal();
+  };
   const close = () => dialogRef.current?.close();
 
   return (
@@ -36,6 +44,8 @@ export function MapsLinkButton({
       </button>
       <dialog
         ref={dialogRef}
+        aria-labelledby={titleId}
+        aria-describedby={addressId}
         onClick={(e) => {
           // Click on the backdrop (the dialog element itself, not its inner
           // content) closes the dialog. Native <dialog> doesn't do this by
@@ -47,10 +57,15 @@ export function MapsLinkButton({
         // showModal() positioning).
         className="m-auto w-[min(20rem,90vw)] rounded-xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-xl backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
       >
-        <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <h2
+          id={titleId}
+          className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+        >
           Open in…
         </h2>
-        <p className="mb-5 text-base font-medium text-zinc-900 dark:text-zinc-100">{address}</p>
+        <p id={addressId} className="mb-5 text-base font-medium text-zinc-900 dark:text-zinc-100">
+          {address}
+        </p>
         <div className="flex flex-col gap-2">
           <a
             href={appleMapsHref(address)}

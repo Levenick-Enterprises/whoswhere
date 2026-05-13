@@ -1,0 +1,84 @@
+name: Deploy to prod tenant
+
+# Manual gate between "main is green on dev" and "the bits are on a prod
+# tenant." Pushing to main only auto-deploys the existing `whoswhere`
+# Vercel project to dev.whos-where.com — every prod tenant has its
+# Vercel git integration DISABLED and waits for this workflow to fire.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant:
+        description: "Which prod tenant to deploy"
+        required: true
+        type: choice
+        options:
+          - demo
+          # Future tenants get added here AND get a matching
+          # VERCEL_PROJECT_ID_<NAME> repo secret + a `case` arm below.
+
+concurrency:
+  # Serialize deploys per tenant — a second click while one is in flight
+  # queues, doesn't race. `cancel-in-progress: false` so we don't abort
+  # a half-done deploy.
+  group: deploy-prod-${{ github.event.inputs.tenant }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.tenant }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Resolve Vercel project ID for tenant
+        id: project
+        run: |
+          case "${{ github.event.inputs.tenant }}" in
+            demo) PROJECT_ID="${{ secrets.VERCEL_PROJECT_ID_DEMO }}" ;;
+            *)
+              echo "Unknown tenant: ${{ github.event.inputs.tenant }}" >&2
+              exit 1
+              ;;
+          esac
+          if [ -z "$PROJECT_ID" ]; then
+            echo "Missing VERCEL_PROJECT_ID_${{ github.event.inputs.tenant }} repo secret" >&2
+            exit 1
+          fi
+          echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Pull Vercel project settings
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ steps.project.outputs.id }}
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build for production
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ steps.project.outputs.id }}
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

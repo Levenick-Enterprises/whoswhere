@@ -15,7 +15,10 @@ function parseAllowlist(): string[] {
 async function originFromHeaders(): Promise<string> {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
+  // Vercel always sets x-forwarded-proto=https in prod; default to http so
+  // `pnpm dev` over the LAN (e.g. http://192.168.x.x:3000 on a phone) builds
+  // a valid callback URL instead of an unreachable https one.
+  const proto = h.get("x-forwarded-proto") ?? "http";
   if (!host) throw new Error("Cannot determine request origin (no host header).");
   return `${proto}://${host}`;
 }

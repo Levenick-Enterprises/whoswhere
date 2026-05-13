@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PeopleList } from "./PeopleList";
 
 export const dynamic = "force-dynamic";
 
 export default async function PeoplePage() {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("people")

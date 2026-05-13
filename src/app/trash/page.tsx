@@ -1,12 +1,12 @@
 import { restoreJobsiteAction } from "@/app/jobsites/actions";
 import { restorePersonAction } from "@/app/people/actions";
 import { RestoreButton } from "@/components/RestoreButton";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const [{ data: jobsites, error: jErr }, { data: people, error: pErr }] = await Promise.all([
     supabase

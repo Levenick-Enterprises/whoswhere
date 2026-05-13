@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { jobsiteInputSchema } from "@/lib/schemas/jobsite";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
   return jobsiteInputSchema.parse({
@@ -16,7 +16,7 @@ function parseFormData(formData: FormData) {
 
 export async function createJobsiteAction(formData: FormData) {
   const input = parseFormData(formData);
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("jobsites").insert(input).select("id").single();
 
   if (error) {
@@ -29,7 +29,7 @@ export async function createJobsiteAction(formData: FormData) {
 
 export async function updateJobsiteAction(id: string, formData: FormData) {
   const input = parseFormData(formData);
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("jobsites").update(input).eq("id", id);
 
   if (error) {
@@ -42,7 +42,7 @@ export async function updateJobsiteAction(id: string, formData: FormData) {
 }
 
 export async function deleteJobsiteAction(id: string) {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("jobsites")
     .update({ archived_at: new Date().toISOString() })
@@ -59,7 +59,7 @@ export async function deleteJobsiteAction(id: string) {
 }
 
 export async function restoreJobsiteAction(id: string) {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("jobsites").update({ archived_at: null }).eq("id", id);
 
   if (error) {

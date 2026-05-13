@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { CrewPicker } from "./CrewPicker";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AssignCrewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: jobsiteId } = await params;
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const [{ data: jobsite, error: jErr }, { data: people, error: pErr }] = await Promise.all([
     supabase

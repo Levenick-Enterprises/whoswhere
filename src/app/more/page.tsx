@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { DragSpeedSetting } from "@/components/DragSpeedSetting";
 import { ThemeSetting } from "@/components/ThemeSetting";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,19 +10,25 @@ const cardClass =
   "flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950";
 
 export default async function MorePage() {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
-  const [{ count: trashedJobsites, error: jErr }, { count: trashedPeople, error: pErr }] =
-    await Promise.all([
-      supabase
-        .from("jobsites")
-        .select("*", { count: "exact", head: true })
-        .not("archived_at", "is", null),
-      supabase
-        .from("people")
-        .select("*", { count: "exact", head: true })
-        .not("archived_at", "is", null),
-    ]);
+  const [
+    { count: trashedJobsites, error: jErr },
+    { count: trashedPeople, error: pErr },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
+    supabase
+      .from("jobsites")
+      .select("*", { count: "exact", head: true })
+      .not("archived_at", "is", null),
+    supabase
+      .from("people")
+      .select("*", { count: "exact", head: true })
+      .not("archived_at", "is", null),
+    supabase.auth.getUser(),
+  ]);
 
   if (jErr || pErr) {
     throw new Error(
@@ -76,6 +82,21 @@ export default async function MorePage() {
           {trashTotal}
         </span>
       </Link>
+
+      <form action="/sign-out" method="post" className={cardClass}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="font-medium">Signed in</span>
+            <span className="truncate text-xs text-zinc-500">{user?.email ?? "Unknown"}</span>
+          </div>
+          <button
+            type="submit"
+            className="shrink-0 rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Sign out
+          </button>
+        </div>
+      </form>
 
       <p className="pt-2 text-center text-xs tabular-nums text-zinc-400 dark:text-zinc-600">
         {buildLabel()}

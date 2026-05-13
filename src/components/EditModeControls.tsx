@@ -44,10 +44,15 @@ function SaveCancelRow({ onCancel }: { onCancel: () => void }) {
   const { pending } = useFormStatus();
   return (
     <div className="flex gap-2">
-      <button type="submit" disabled={pending} className={primaryButton}>
+      <button type="submit" disabled={pending} className={`${primaryButton} flex-1`}>
         {pending ? "Saving…" : "Save"}
       </button>
-      <button type="button" onClick={onCancel} disabled={pending} className={secondaryButton}>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={pending}
+        className={`${secondaryButton} flex-1`}
+      >
         Cancel
       </button>
     </div>

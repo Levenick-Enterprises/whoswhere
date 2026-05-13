@@ -85,12 +85,12 @@ export default async function MorePage() {
 }
 
 /** Short build identifier rendered in the More menu footer. Used to verify a
- * specific deploy is live on a given hostname — Vercel sets the git env vars
- * during builds (natively on the dev project's git deploys, explicitly via
- * deploy-prod.yml for tenant prod deploys). */
+ * specific deploy is live on a given hostname. The NEXT_PUBLIC_BUILD_* values
+ * are mapped from Vercel's VERCEL_GIT_* env vars in next.config.ts; Next.js
+ * inlines them at compile time so they survive force-dynamic rendering. */
 function buildLabel(): string {
-  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8);
-  const message = process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "";
+  const sha = process.env.NEXT_PUBLIC_BUILD_SHA?.slice(0, 7) || null;
+  const message = process.env.NEXT_PUBLIC_BUILD_MESSAGE ?? "";
   const prNumber = message.match(/\(#(\d+)\)/)?.[1];
 
   if (prNumber && sha) return `Build: ${prNumber} (${sha})`;

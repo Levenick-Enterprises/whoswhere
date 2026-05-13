@@ -11,7 +11,9 @@ export default async function PeoplePage() {
 
   const { data, error } = await supabase
     .from("people")
-    .select("id, name, phone, notes, current_jobsite:current_jobsite_id (id, name, archived_at)")
+    .select(
+      "id, name, position, phone, notes, current_jobsite:current_jobsite_id (id, name, archived_at)",
+    )
     .is("archived_at", null)
     .order("name", { ascending: true });
 

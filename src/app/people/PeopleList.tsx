@@ -1,11 +1,15 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+
+import { PhoneIcon } from "@/components/icons";
+import { telHref } from "@/lib/links";
 
 type PersonWithJobsite = {
   id: string;
   name: string;
+  position: string | null;
   phone: string | null;
   notes: string | null;
   current_jobsite: { id: string; name: string } | null;
@@ -19,6 +23,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
     if (!q) return people;
     return people.filter((p) => {
       if (p.name.toLowerCase().includes(q)) return true;
+      if (p.position?.toLowerCase().includes(q)) return true;
       if (p.phone?.toLowerCase().includes(q)) return true;
       if (p.current_jobsite?.name.toLowerCase().includes(q)) return true;
       return false;
@@ -30,7 +35,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
       <input
         type="search"
         inputMode="search"
-        placeholder="Search names, phone numbers, or jobsites…"
+        placeholder="Search names, positions, phones, or jobsites…"
         aria-label="Search people"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -42,32 +47,61 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
       ) : (
         <ul className="flex flex-col gap-2">
           {filtered.map((person) => (
-            <li key={person.id}>
-              <Link
-                href={`/people/${person.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-              >
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate text-base font-medium">{person.name}</span>
-                  {person.phone && (
-                    <span className="truncate text-xs text-zinc-500">{person.phone}</span>
-                  )}
-                </div>
-                {person.current_jobsite ? (
-                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                    {person.current_jobsite.name}
-                  </span>
-                ) : (
-                  <span className="shrink-0 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
-                    unassigned
-                  </span>
-                )}
-              </Link>
-            </li>
+            <PersonRow key={person.id} person={person} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+function PersonRow({ person }: { person: PersonWithJobsite }) {
+  const router = useRouter();
+  const phoneHref = person.phone ? telHref(person.phone) : null;
+
+  // A button underlay covers the whole row so a tap anywhere navigates to the
+  // record. The phone pill is the ONLY <a> in the row and floats above the
+  // button (z-10 + pointer-events-auto); the rest of the content is
+  // pointer-events-none so the underlay catches its taps. Using a button (not
+  // a nested Link) means iOS never sees two overlapping anchors when the user
+  // is tapping near the phone pill, which previously made Safari's anti-spam
+  // heuristic flag rapid taps as "automatic calls."
+  return (
+    <li className="relative rounded-lg border border-zinc-200 bg-white transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900">
+      <button
+        type="button"
+        onClick={() => router.push(`/people/${person.id}`)}
+        aria-label={`Open ${person.name}'s record`}
+        className="absolute inset-0 rounded-lg"
+      />
+      <div className="pointer-events-none relative flex items-center gap-2 p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate text-base font-medium">{person.name}</span>
+          {person.position && (
+            <span className="truncate text-xs text-zinc-500">{person.position}</span>
+          )}
+        </div>
+        {phoneHref && person.phone && (
+          <a
+            href={phoneHref}
+            aria-label={`Call ${person.name} at ${person.phone}`}
+            className="pointer-events-auto relative z-10 flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            <PhoneIcon width={14} height={14} />
+            <span className="tabular-nums">{person.phone}</span>
+          </a>
+        )}
+        {person.current_jobsite ? (
+          <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+            {person.current_jobsite.name}
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">
+            unassigned
+          </span>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -76,7 +110,7 @@ function EmptyState({ query, totalRows }: { query: string; totalRows: number }) 
     return (
       <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
         <p>No people yet.</p>
-        <p className="mt-1 text-xs">Tap “+ New” above to create one.</p>
+        <p className="mt-1 text-xs">Tap &ldquo;+ New&rdquo; above to create one.</p>
       </div>
     );
   }

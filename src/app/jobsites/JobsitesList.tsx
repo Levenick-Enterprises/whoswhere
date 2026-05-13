@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import { reassignPersonAction } from "@/app/people/actions";
+import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
@@ -190,7 +191,17 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                 <DropZone
                   id={jobsite.id}
                   title={jobsite.name}
-                  subtitle={jobsite.address ?? undefined}
+                  subtitle={
+                    jobsite.address ? (
+                      <MapsLinkButton
+                        address={jobsite.address}
+                        ariaLabel={`Open ${jobsite.address} in maps — choose Apple Maps or Google Maps`}
+                        className="text-left underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                      >
+                        {jobsite.address}
+                      </MapsLinkButton>
+                    ) : undefined
+                  }
                   count={sitePeople.length}
                   href={`/jobsites/${jobsite.id}`}
                 >
@@ -221,7 +232,7 @@ function DropZone({
 }: {
   id: string;
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   count: number;
   href?: string;
   children: ReactNode;
@@ -252,7 +263,7 @@ function DropZone({
           {count} {count === 1 ? "person" : "people"}
         </span>
       </div>
-      {subtitle && <p className="text-sm text-zinc-500">{subtitle}</p>}
+      {subtitle && <div className="text-sm text-zinc-500">{subtitle}</div>}
       <ul className="flex flex-wrap gap-1.5">
         {children}
         {count === 0 && <li className="text-xs italic text-zinc-400">No one here.</li>}

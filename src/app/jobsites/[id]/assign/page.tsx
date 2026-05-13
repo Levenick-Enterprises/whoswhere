@@ -21,7 +21,7 @@ export default async function AssignCrewPage({ params }: { params: Promise<{ id:
     supabase
       .from("people")
       .select(
-        "id, name, phone, current_jobsite_id, current_jobsite:current_jobsite_id (id, name, archived_at)",
+        "id, name, position, phone, current_jobsite_id, current_jobsite:current_jobsite_id (id, name, archived_at)",
       )
       .is("archived_at", null)
       .order("name", { ascending: true }),

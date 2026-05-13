@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api repos/Levenick-Enterprises/whoswhere/*)",
+      "Bash(gh pr create --draft *)",
+      "Bash(gh pr edit * --repo Levenick-Enterprises/whoswhere *)",
+      "Bash(gh pr ready *)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks *)"
+    ]
+  }
+}

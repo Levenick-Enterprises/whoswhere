@@ -8,6 +8,7 @@ import { AssignButton } from "@/components/AssignButton";
 type Person = {
   id: string;
   name: string;
+  position: string | null;
   phone: string | null;
   current_jobsite_id: string | null;
   current_jobsite: { id: string; name: string; archived_at: string | null } | null;
@@ -22,6 +23,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
     return people.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
+        p.position?.toLowerCase().includes(q) ||
         p.phone?.toLowerCase().includes(q) ||
         p.current_jobsite?.name.toLowerCase().includes(q),
     );
@@ -44,7 +46,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
       <input
         type="search"
         inputMode="search"
-        placeholder="Search names, phones, or jobsites…"
+        placeholder="Search names, positions, phones, or jobsites…"
         aria-label="Search crew"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -151,15 +153,20 @@ function PersonRow({
   badge,
   action,
 }: {
-  person: { id: string; name: string; phone: string | null };
+  person: { id: string; name: string; position: string | null; phone: string | null };
   badge?: string;
   action: ReactNode;
 }) {
+  const hasSubtitle = !!(person.position || person.phone);
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate font-medium">{person.name}</span>
-        {person.phone && <span className="truncate text-xs text-zinc-500">{person.phone}</span>}
+        {hasSubtitle && (
+          <span className="truncate text-xs text-zinc-500">
+            {[person.position, person.phone].filter(Boolean).join(" · ")}
+          </span>
+        )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {badge && (

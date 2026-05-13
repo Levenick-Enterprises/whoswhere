@@ -1,10 +1,10 @@
-/** `tel:` URI for a phone number. RFC 3966 only allows digits, `+`, `-`, `*`,
- * `#`, `(`, `)`, and `.` in the path — strip anything else (most commonly
- * whitespace from input like "(555) 123 4567") to keep the URL valid across
- * browsers. The dialer itself is forgiving once the URI parses. */
-export function telHref(phone: string): string {
+/** `tel:` URI for a phone number, or `null` if the input has no characters
+ * RFC 3966 considers dialable (digits, `+`, `-`, `*`, `#`, `(`, `)`, `.`).
+ * Callers should suppress the link when this returns null so we don't render
+ * a tappable element that opens the dialer with an empty number. */
+export function telHref(phone: string): string | null {
   const normalized = phone.replace(/[^\d+\-*#().]/g, "");
-  return `tel:${normalized}`;
+  return normalized ? `tel:${normalized}` : null;
 }
 
 /** Universal Google Maps search URL — opens Apple Maps on iOS via the system

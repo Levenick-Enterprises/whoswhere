@@ -54,6 +54,7 @@ export function PersonEditForm({
 
 function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) {
   const hasAny = person.position || person.phone || person.notes;
+  const phoneHref = person.phone ? telHref(person.phone) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,15 +65,20 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) 
               {person.position}
             </DetailIconRow>
           )}
-          {person.phone && (
-            <DetailIconRow
-              icon={PhoneIcon}
-              href={telHref(person.phone)}
-              label={`Call ${person.name} at ${person.phone}`}
-            >
-              {person.phone}
-            </DetailIconRow>
-          )}
+          {person.phone &&
+            (phoneHref ? (
+              <DetailIconRow
+                icon={PhoneIcon}
+                href={phoneHref}
+                label={`Call ${person.name} at ${person.phone}`}
+              >
+                {person.phone}
+              </DetailIconRow>
+            ) : (
+              <DetailIconRow icon={PhoneIcon} label="Phone">
+                {person.phone}
+              </DetailIconRow>
+            ))}
           {person.notes && (
             <DetailIconRow icon={FileTextIcon} label="Notes">
               {person.notes}

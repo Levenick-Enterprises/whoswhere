@@ -57,6 +57,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
 
 function PersonRow({ person }: { person: PersonWithJobsite }) {
   const router = useRouter();
+  const phoneHref = person.phone ? telHref(person.phone) : null;
 
   // A button underlay covers the whole row so a tap anywhere navigates to the
   // record. The phone pill is the ONLY <a> in the row and floats above the
@@ -80,9 +81,9 @@ function PersonRow({ person }: { person: PersonWithJobsite }) {
             <span className="truncate text-xs text-zinc-500">{person.position}</span>
           )}
         </div>
-        {person.phone && (
+        {phoneHref && person.phone && (
           <a
-            href={telHref(person.phone)}
+            href={phoneHref}
             aria-label={`Call ${person.name} at ${person.phone}`}
             className="pointer-events-auto relative z-10 flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 text-xs text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >

@@ -24,6 +24,9 @@ export function DetailIconRow({
   const valueClass = "min-w-0 break-words text-zinc-900 dark:text-zinc-100";
 
   if (href) {
+    // aria-label on a link replaces the inner text for screen readers — fine
+    // here because tap-to-call / tap-to-map callers pass a label that already
+    // includes the value (e.g. "Call John at 555-1234").
     return (
       <a
         href={href}
@@ -36,10 +39,16 @@ export function DetailIconRow({
     );
   }
 
+  // Non-link variant: don't put aria-label on the wrapper — it would override
+  // the visible value text. Instead render the label as an sr-only prefix so
+  // screen readers hear "Position: Carpenter" without losing the value.
   return (
-    <div aria-label={label} className={rowClass}>
+    <div className={rowClass}>
       <Icon className={iconClass} />
-      <span className={valueClass}>{children}</span>
+      <span className={valueClass}>
+        {label && <span className="sr-only">{label}: </span>}
+        {children}
+      </span>
     </div>
   );
 }

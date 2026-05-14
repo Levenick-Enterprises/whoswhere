@@ -7,6 +7,34 @@
 -- Default REPLICA IDENTITY (primary key only) is intentional — our handler
 -- just calls router.refresh() on any event and doesn't inspect the payload,
 -- so we don't need the WAL overhead of REPLICA IDENTITY FULL.
+--
+-- Idempotent: ALTER PUBLICATION ... ADD TABLE errors with "relation is
+-- already member of publication" if the table was already added (e.g. via
+-- the Supabase dashboard UI or a partial prior run). Guarding each statement
+-- against pg_publication_tables keeps the migration safe to re-apply.
 
-alter publication supabase_realtime add table public.jobsites;
-alter publication supabase_realtime add table public.people;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'jobsites'
+  ) then
+    alter publication supabase_realtime add table public.jobsites;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'people'
+  ) then
+    alter publication supabase_realtime add table public.people;
+  end if;
+end $$;

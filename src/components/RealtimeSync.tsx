@@ -48,12 +48,23 @@ export function RealtimeSync() {
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
+    // Keep realtime's auth context fresh across cookie-refresh cycles. The
+    // browser client refreshes the JWT every ~hour; without this the
+    // WebSocket would keep using the original token and eventually drop
+    // events under RLS once the original expires.
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && session) {
+        void supabase.realtime.setAuth(session.access_token);
+      }
+    });
+
     return () => {
       if (refreshTimerRef.current) {
         clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      authSub.subscription.unsubscribe();
       void supabase.removeChannel(channel);
     };
   }, [router, onAuthSurface]);

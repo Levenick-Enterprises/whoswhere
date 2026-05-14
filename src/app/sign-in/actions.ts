@@ -1,8 +1,8 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { publicOrigin } from "@/lib/origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseAllowlist(): string[] {
@@ -10,17 +10,6 @@ function parseAllowlist(): string[] {
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-}
-
-async function originFromHeaders(): Promise<string> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  // Vercel always sets x-forwarded-proto=https in prod; default to http so
-  // `pnpm dev` over the LAN (e.g. http://192.168.x.x:3000 on a phone) builds
-  // a valid callback URL instead of an unreachable https one.
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  if (!host) throw new Error("Cannot determine request origin (no host header).");
-  return `${proto}://${host}`;
 }
 
 /**
@@ -36,14 +25,12 @@ export async function requestMagicLinkAction(formData: FormData) {
 
   if (rawEmail && parseAllowlist().includes(rawEmail)) {
     const supabase = await createSupabaseServerClient();
-    const origin = await originFromHeaders();
-    await supabase.auth.signInWithOtp({
+    const emailRedirectTo = `${await publicOrigin()}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOtp({
       email: rawEmail,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback`,
-        shouldCreateUser: true,
-      },
+      options: { emailRedirectTo, shouldCreateUser: true },
     });
+    if (error) console.error("[sign-in] supabase rejected:", error);
   }
 
   redirect("/sign-in?sent=1");

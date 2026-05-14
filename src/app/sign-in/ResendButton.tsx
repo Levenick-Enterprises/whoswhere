@@ -4,23 +4,23 @@ import { useEffect, useState, useTransition } from "react";
 
 import { requestMagicLinkAction } from "./actions";
 
-const RESEND_COOLDOWN_SECONDS = 30;
-
-export function ResendButton({ next, sentAt }: { next: string; sentAt: number }) {
-  const computeSecondsLeft = () =>
-    Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((Date.now() - sentAt) / 1000));
-
-  const [secondsLeft, setSecondsLeft] = useState(computeSecondsLeft);
+export function ResendButton({
+  next,
+  initialSecondsLeft,
+}: {
+  next: string;
+  initialSecondsLeft: number;
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(initialSecondsLeft);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
     const timer = setInterval(() => {
-      setSecondsLeft(computeSecondsLeft());
+      setSecondsLeft((s) => Math.max(0, s - 1));
     }, 1000);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft, sentAt]);
+  }, [secondsLeft]);
 
   const disabled = secondsLeft > 0 || isPending;
 

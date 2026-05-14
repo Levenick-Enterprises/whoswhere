@@ -10,8 +10,18 @@ import { ResendButton } from "./ResendButton";
 
 export const dynamic = "force-dynamic";
 
+const RESEND_COOLDOWN_SECONDS = 30;
+
 const cardClass =
   "flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950";
+
+// Server-side compute so the client doesn't have to compare a server timestamp
+// to a possibly-skewed browser clock — pulled out of the component body to
+// satisfy react-hooks/purity (Date.now is impure).
+function computeResendSecondsLeft(sentAt: number | null): number {
+  if (sentAt === null || !Number.isFinite(sentAt)) return 0;
+  return Math.max(0, RESEND_COOLDOWN_SECONDS - Math.floor((Date.now() - sentAt) / 1000));
+}
 
 export default async function SignInPage({
   searchParams,
@@ -27,6 +37,7 @@ export default async function SignInPage({
   const lastEmail = cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? null;
   const sentAtRaw = cookieStore.get(SIGNIN_SENT_AT_COOKIE)?.value ?? null;
   const sentAt = sentAtRaw ? Number(sentAtRaw) : null;
+  const resendSecondsLeft = computeResendSecondsLeft(sentAt);
 
   return (
     <section className="flex flex-col gap-4">
@@ -50,8 +61,8 @@ export default async function SignInPage({
           )}
 
           <div className="flex items-center justify-between gap-3 pt-2">
-            {lastEmail && sentAt !== null && Number.isFinite(sentAt) ? (
-              <ResendButton next={next} sentAt={sentAt} />
+            {lastEmail ? (
+              <ResendButton next={next} initialSecondsLeft={resendSecondsLeft} />
             ) : (
               <span />
             )}

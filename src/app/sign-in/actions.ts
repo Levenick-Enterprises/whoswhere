@@ -6,11 +6,7 @@ import { redirect } from "next/navigation";
 import { publicOrigin, safeNext } from "@/lib/origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import {
-  SIGNIN_COOKIE_MAX_AGE,
-  SIGNIN_EMAIL_COOKIE,
-  SIGNIN_SENT_AT_COOKIE,
-} from "./cookies";
+import { SIGNIN_COOKIE_MAX_AGE, SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
 
 function parseAllowlist(): string[] {
   return (process.env.ALLOWED_EMAILS ?? "")

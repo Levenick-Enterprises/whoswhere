@@ -50,7 +50,13 @@ restore_dev_link() {
   echo "→ Re-linking Supabase CLI to dev (${DEV_REF})..."
   supabase link --project-ref "${DEV_REF}" >/dev/null 2>&1 || true
 }
-trap restore_dev_link EXIT INT TERM
+# INT/TERM: cleanup, then exit 130 — without the explicit exit, bash's
+# default is to run the trap and *resume* the script at the next line, which
+# means a Ctrl-C mid-`push demo` would relink to dev and then keep running
+# the rest of cmd_push (the push itself) against dev. Not what we want.
+# EXIT: cleanup only (script is already on its way out).
+trap 'restore_dev_link; exit 130' INT TERM
+trap restore_dev_link EXIT
 
 resolve_ref() {
   local tenant="$1"

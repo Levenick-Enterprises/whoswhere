@@ -1,7 +1,12 @@
+import { cookies } from "next/headers";
+import Link from "next/link";
+
 import { FormField, inputClass } from "@/components/FormField";
 import { safeNext } from "@/lib/origin";
 
 import { requestMagicLinkAction } from "./actions";
+import { SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
+import { ResendButton } from "./ResendButton";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +23,11 @@ export default async function SignInPage({
   const callbackError = params.error === "callback";
   const next = safeNext(params.next);
 
+  const cookieStore = await cookies();
+  const lastEmail = cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? null;
+  const sentAtRaw = cookieStore.get(SIGNIN_SENT_AT_COOKIE)?.value ?? null;
+  const sentAt = sentAtRaw ? Number(sentAtRaw) : null;
+
   return (
     <section className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
@@ -31,9 +41,27 @@ export default async function SignInPage({
             If that email is on the allowlist for this tenant, a magic link is on its way. Open it
             on this device to finish signing in.
           </p>
-          <p className="text-xs text-zinc-500">
-            Links expire after a short window — request a new one any time.
-          </p>
+          {lastEmail && (
+            <p className="text-xs text-zinc-500">
+              Sent to{" "}
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">{lastEmail}</span>.
+              Links expire after about an hour.
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-3 pt-2">
+            {lastEmail && sentAt !== null && Number.isFinite(sentAt) ? (
+              <ResendButton next={next} sentAt={sentAt} />
+            ) : (
+              <span />
+            )}
+            <Link
+              href={`/sign-in${next !== "/jobsites" ? `?next=${encodeURIComponent(next)}` : ""}`}
+              className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:hover:text-zinc-300"
+            >
+              Use a different email
+            </Link>
+          </div>
         </div>
       ) : (
         <form action={requestMagicLinkAction} className={cardClass}>
@@ -47,6 +75,7 @@ export default async function SignInPage({
               autoFocus
               inputMode="email"
               placeholder="you@example.com"
+              defaultValue={lastEmail ?? ""}
               className={inputClass}
             />
           </FormField>

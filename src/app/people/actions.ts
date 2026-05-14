@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 
 import { personInputSchema } from "@/lib/schemas/person";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
   return personInputSchema.parse({
@@ -17,7 +17,7 @@ function parseFormData(formData: FormData) {
 
 export async function createPersonAction(formData: FormData) {
   const input = parseFormData(formData);
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("people").insert(input).select("id").single();
 
   if (error) {
@@ -30,7 +30,7 @@ export async function createPersonAction(formData: FormData) {
 
 export async function updatePersonAction(id: string, formData: FormData) {
   const input = parseFormData(formData);
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("people").update(input).eq("id", id);
 
   if (error) {
@@ -43,7 +43,7 @@ export async function updatePersonAction(id: string, formData: FormData) {
 }
 
 export async function deletePersonAction(id: string) {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("people")
     .update({ archived_at: new Date().toISOString() })
@@ -60,7 +60,7 @@ export async function deletePersonAction(id: string) {
 }
 
 export async function restorePersonAction(id: string) {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("people").update({ archived_at: null }).eq("id", id);
 
   if (error) {
@@ -72,7 +72,7 @@ export async function restorePersonAction(id: string) {
 }
 
 async function assignPerson(personId: string, jobsiteId: string | null) {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
   const { data: previous, error: fetchError } = await supabase
     .from("people")
     .select("current_jobsite_id")

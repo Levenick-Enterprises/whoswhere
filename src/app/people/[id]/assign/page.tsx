@@ -3,13 +3,13 @@ import { notFound } from "next/navigation";
 
 import { reassignPersonAction } from "@/app/people/actions";
 import { AssignButton } from "@/components/AssignButton";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AssignPersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: personId } = await params;
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const [{ data: person, error: pErr }, { data: jobsites, error: jErr }] = await Promise.all([
     supabase

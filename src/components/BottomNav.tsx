@@ -11,6 +11,8 @@ const tabs = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === "/sign-in" || pathname.startsWith("/auth/")) return null;
+
   return (
     <nav
       aria-label="Primary"

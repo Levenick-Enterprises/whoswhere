@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PersonEditForm } from "@/components/PersonEditForm";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { deletePersonAction, updatePersonAction } from "../actions";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function EditPersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data: person, error } = await supabase
     .from("people")

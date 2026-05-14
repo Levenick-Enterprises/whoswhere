@@ -61,7 +61,19 @@ Once a second tenant ships, wrap this in `scripts/push-prod-migrations.sh` that 
 
 ### Auth + multi-tenant security
 
-Each tenant URL is currently the credential (no auth gate). Risk: subdomain is guessable. Acceptable for the two-friend prototype scope (`demo` + a future `knutson`); revisit deferred-backlog issue #2 (Auth gate) before a third party gets a tenant.
+Each tenant Supabase project IS the auth realm — sessions don't cross tenant boundaries because each project has its own `auth.users` table and its own session cookies (tied to the project's domain).
+
+**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp` to send a magic link. The post-submit screen is identical regardless of allowlist outcome (no enumeration). Clicking the link hits `/auth/callback`, which exchanges the code for a session cookie and lands the user on `/jobsites`. `/sign-out` (POST) clears the session.
+
+**Where the gate lives.** `src/middleware.ts` refreshes the cookie on every request and redirects unauthenticated traffic to `/sign-in`. Server components, server actions, and route handlers use `createSupabaseServerClient()` from `src/lib/supabase/server.ts` (cookie-backed, RLS-aware). The legacy `createAdminClient()` (secret-key, RLS-bypassing) in `src/lib/supabase/admin.ts` is kept around as a server-only escape hatch but is not referenced by any route after #2 — reserve it for future bulk imports / scripts / webhooks.
+
+**RLS scope today.** Single-foreman-per-tenant means policies are intentionally permissive — `to authenticated using (true)` on both tables. When issue #8 (multi-foreman) ships, narrow these to `auth.uid()`-scoped policies. Don't mistake the current shape for the long-term model.
+
+**Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
+
+1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
+2. Push the `enable_authed_access` migration (alongside any other pending schema): `supabase link --project-ref <ref> && pnpm db:push && supabase link --project-ref <dev-ref>`.
+3. Vercel project → Settings → Environment Variables: set `ALLOWED_EMAILS` (Production scope, comma-separated) to the addresses authorized for this tenant.
 
 ### Deferred ops
 

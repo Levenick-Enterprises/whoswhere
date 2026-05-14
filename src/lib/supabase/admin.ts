@@ -5,13 +5,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
 /**
- * Server-only Supabase client that uses the secret key.
+ * Server-only Supabase client that uses the secret key and bypasses RLS.
  *
- * Bypasses RLS. Never import this from a client component. For v1 the
- * secret-key client is the *only* path to the database — RLS is enabled
- * with no policies, so the publishable key can read nothing. When auth
- * lands, we'll add a separate cookie-backed user client for auth-scoped
- * queries.
+ * Not used by app routes — every page and server action goes through
+ * `createSupabaseServerClient()` (cookie-backed, auth-aware) instead. This
+ * client stays in the codebase as an escape hatch for future server-only
+ * utilities that legitimately need to bypass RLS: bulk imports, scripts,
+ * webhook handlers, anything without a user session. Never import from a
+ * client component.
  */
 export function createAdminClient(): SupabaseClient<Database> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

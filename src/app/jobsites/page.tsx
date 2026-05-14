@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { JobsitesList } from "./JobsitesList";
 
 export const dynamic = "force-dynamic";
 
 export default async function JobsitesPage() {
-  const supabase = createAdminClient();
+  const supabase = await createSupabaseServerClient();
 
   const [{ data: jobsites, error: jErr }, { data: people, error: pErr }] = await Promise.all([
     supabase

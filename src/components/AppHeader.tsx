@@ -9,6 +9,11 @@ const morePaths = ["/more", "/trash"];
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+
+  // Sign-in / auth-callback routes render their own minimal shell; the
+  // hamburger + home link wouldn't lead anywhere a signed-out user can reach.
+  if (pathname === "/sign-in" || pathname.startsWith("/auth/")) return null;
+
   const onMorePage = pathname === moreHref;
   const moreActive = morePaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 

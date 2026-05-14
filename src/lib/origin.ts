@@ -27,3 +27,17 @@ export async function publicOrigin(): Promise<string> {
   const proto = LOCAL_HOST_RE.test(host) ? "http" : "https";
   return `${proto}://${host}`;
 }
+
+/**
+ * Coerces an untrusted `next` redirect parameter into a safe internal path.
+ * Anything not starting with a single `/` (or starting with `//`, which is
+ * a protocol-relative URL) falls back to `/jobsites`. Prevents open-redirect
+ * attacks where `?next=https://evil` would bounce the user off-site after
+ * sign-in.
+ */
+export function safeNext(raw: string | null | undefined, fallback = "/jobsites"): string {
+  if (!raw) return fallback;
+  if (!raw.startsWith("/")) return fallback;
+  if (raw.startsWith("//")) return fallback;
+  return raw;
+}

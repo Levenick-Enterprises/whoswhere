@@ -1,4 +1,5 @@
 import { FormField, inputClass } from "@/components/FormField";
+import { safeNext } from "@/lib/origin";
 
 import { requestMagicLinkAction } from "./actions";
 
@@ -10,11 +11,12 @@ const cardClass =
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string }>;
+  searchParams: Promise<{ sent?: string; error?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const sent = params.sent === "1";
   const callbackError = params.error === "callback";
+  const next = safeNext(params.next);
 
   return (
     <section className="flex flex-col gap-4">
@@ -35,6 +37,7 @@ export default async function SignInPage({
         </div>
       ) : (
         <form action={requestMagicLinkAction} className={cardClass}>
+          <input type="hidden" name="next" value={next} />
           <FormField label="Email" hint="The address an admin allowlisted for this tenant.">
             <input
               name="email"

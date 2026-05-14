@@ -41,13 +41,14 @@ The gate is deliberate — accidental merges shouldn't ship half-baked migration
 
 When a real prod tenant needs to come online — e.g. `knutson.whos-where.com` for Curtis's company, Knutson Construction:
 
-1. **Supabase**: create a new project. For the initial bootstrap push, run `supabase link --project-ref <new>` + `supabase db push` directly (the new tenant isn't in `scripts/db.sh` yet — step 5 adds it). Future migrations go through the wrapper.
-2. **Vercel**: create a new project linked to this repo. Settings → Git → disable production deployments. Paste the new Supabase URL + secret key into Production env vars. Settings → Domains → add `<tenant>.whos-where.com`.
-3. **Cloudflare DNS**: add `<tenant>.whos-where.com` CNAME → `cname.vercel-dns.com`, DNS-only (grey cloud).
-4. **GitHub repo secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) with the new project's ID.
-5. **Register the tenant in two places**:
-   - `scripts/db.sh` — append `<tenant>` to `PROD_TENANT_NAMES` and the matching ref to `PROD_TENANT_REFS` at the same index (this is what makes `./scripts/db.sh push <tenant>` work).
+1. **Supabase**: create a new project. Note its `project-ref` from the dashboard URL.
+2. **Register the tenant in two places** (do this BEFORE the bootstrap push so the wrapper can drive it):
+   - `scripts/db.sh` — append `<tenant>` to `PROD_TENANT_NAMES` and the matching ref to `PROD_TENANT_REFS` at the same index.
    - `.github/workflows/deploy-prod.yml` — add `<tenant>` to `inputs.tenant.options` and a matching `case` arm in the resolver step.
+3. **Bootstrap push**: `./scripts/db.sh push <tenant>`. The wrapper handles the link → push → relink-to-dev dance for the initial push too, so the CLI never gets stuck on the new prod tenant.
+4. **Vercel**: create a new project linked to this repo. Settings → Git → disable production deployments. Paste the new Supabase URL + secret key into Production env vars. Settings → Domains → add `<tenant>.whos-where.com`.
+5. **Cloudflare DNS**: add `<tenant>.whos-where.com` CNAME → `cname.vercel-dns.com`, DNS-only (grey cloud).
+6. **GitHub repo secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) with the new project's ID.
 
 ### Applying schema migrations across tenants
 

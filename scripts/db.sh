@@ -48,7 +48,14 @@ restore_dev_link() {
 
   echo ""
   echo "→ Re-linking Supabase CLI to dev (${DEV_REF})..."
-  supabase link --project-ref "${DEV_REF}" >/dev/null 2>&1 || true
+  # Suppress only stdout ("Finished supabase link." is implied by us not warning).
+  # Let stderr through, and warn loudly on failure — silently failing to relink
+  # is the exact leak this wrapper exists to prevent.
+  if ! supabase link --project-ref "${DEV_REF}" >/dev/null; then
+    echo "" >&2
+    echo "⚠  Failed to re-link CLI to dev. You may still be linked to a non-dev tenant." >&2
+    echo "    Re-run manually: supabase link --project-ref ${DEV_REF}" >&2
+  fi
 }
 # INT/TERM: cleanup, then exit 130 — without the explicit exit, bash's
 # default is to run the trap and *resume* the script at the next line, which

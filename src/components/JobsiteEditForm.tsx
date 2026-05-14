@@ -10,6 +10,7 @@ import { FormField, inputClass } from "@/components/FormField";
 import { FileTextIcon, MapPinIcon } from "@/components/icons";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
+import { useMarkPageBusy } from "@/lib/page-busy";
 
 type Jobsite = {
   id: string;
@@ -105,9 +106,19 @@ function EditFields({
   onCancel: () => void;
 }) {
   const [state, formAction] = useActionState(updateAction, ACTION_OK);
+  // Mark the page busy on first onChange — see PersonEditForm for the same
+  // rationale (#31).
+  const [isDirty, setIsDirty] = useState(false);
+  useMarkPageBusy(isDirty);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form
+      action={formAction}
+      onChange={() => {
+        if (!isDirty) setIsDirty(true);
+      }}
+      className="flex flex-col gap-4"
+    >
       <FormErrorBanner state={state} />
 
       <FormField label="Name">

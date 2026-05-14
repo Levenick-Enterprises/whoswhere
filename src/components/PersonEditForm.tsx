@@ -10,6 +10,7 @@ import { FormField, inputClass } from "@/components/FormField";
 import { BriefcaseIcon, FileTextIcon, PhoneIcon } from "@/components/icons";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { telHref } from "@/lib/links";
+import { useMarkPageBusy } from "@/lib/page-busy";
 
 type Person = {
   id: string;
@@ -110,9 +111,21 @@ function EditFields({
   onCancel: () => void;
 }) {
   const [state, formAction] = useActionState(updateAction, ACTION_OK);
+  // Marks the page busy as soon as the user touches any field, which makes
+  // RealtimeSync skip its router.refresh() until the form unmounts (save or
+  // cancel). Prevents typed-but-unsubmitted input from being lost to a
+  // remote-event-triggered refresh (#31).
+  const [isDirty, setIsDirty] = useState(false);
+  useMarkPageBusy(isDirty);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form
+      action={formAction}
+      onChange={() => {
+        if (!isDirty) setIsDirty(true);
+      }}
+      className="flex flex-col gap-4"
+    >
       <FormErrorBanner state={state} />
 
       <FormField label="Name">

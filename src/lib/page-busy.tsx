@@ -69,15 +69,30 @@ export function usePageBusyAPI(): PageBusyAPI | null {
 }
 
 /**
- * Marks the calling component as "busy" while `active` is true.
- * Automatically releases on unmount or when `active` transitions back to
- * false. Use for declarative dirty/editing tracking on forms.
+ * Returns a synchronous "mark me busy" function. The first call registers;
+ * subsequent calls are no-ops. Release happens automatically on unmount.
+ *
+ * Use this for event-handler-driven registration (e.g. first onChange on a
+ * form). A useEffect-based hook would leave a micro-race where an already-due
+ * realtime debounce timer could fire between the state flip and the effect
+ * running — losing the first keystroke. Calling `register()` directly in the
+ * event handler closes that window.
  */
-export function useMarkPageBusy(active: boolean) {
+export function useRegisterBusyOnce(): () => void {
   const ctx = useContext(Ctx);
+  const releaseRef = useRef<(() => void) | null>(null);
+
+  // Release on unmount. The empty deps + idempotent release function make
+  // this safe to call regardless of how many times `markBusy` was invoked.
   useEffect(() => {
-    if (!ctx || !active) return;
-    const release = ctx.register();
-    return release;
-  }, [ctx, active]);
+    return () => {
+      releaseRef.current?.();
+      releaseRef.current = null;
+    };
+  }, []);
+
+  return useCallback(() => {
+    if (releaseRef.current || !ctx) return;
+    releaseRef.current = ctx.register();
+  }, [ctx]);
 }

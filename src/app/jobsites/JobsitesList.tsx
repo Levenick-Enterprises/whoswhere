@@ -125,17 +125,16 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
       applyOptimisticUpdate({ personId, jobsiteId: targetJobsiteId });
       try {
         const result = await reassignPerson(personId, targetJobsiteId);
-        if (!result.ok) {
-          // The optimistic state has already jumped the pill to its new spot.
-          // Surface the failure and force a server re-render so the UI reverts
-          // to truth rather than leaving the lie in place.
-          setDragError(result.message);
-          router.refresh();
-        } else {
-          setDragError(null);
-        }
+        setDragError(result.ok ? null : result.message);
       } finally {
         release?.();
+        // Refresh AFTER release in every branch:
+        //   - Success: the realtime echo for our own write was probably
+        //     skipped while we were busy. The action's revalidatePath should
+        //     have updated the route, but the explicit refresh is cheap
+        //     insurance — keeps useOptimistic's base state in sync.
+        //   - Failure: reverts the optimistic update by re-fetching truth.
+        router.refresh();
       }
     });
   }

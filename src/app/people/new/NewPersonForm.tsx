@@ -1,29 +1,22 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
 import { ACTION_OK } from "@/lib/action-result";
-import { useMarkPageBusy } from "@/lib/page-busy";
+import { useRegisterBusyOnce } from "@/lib/page-busy";
 
 import { createPersonAction } from "../actions";
 
 export function NewPersonForm() {
   const [state, formAction] = useActionState(createPersonAction, ACTION_OK);
-  // Mark the page busy after the first onChange so a realtime event doesn't
-  // re-render the page and throw away typed input (#31).
-  const [isDirty, setIsDirty] = useState(false);
-  useMarkPageBusy(isDirty);
+  // Synchronous busy registration on first onChange so a realtime event
+  // can't slip in between the keystroke and the gate (#31).
+  const markBusy = useRegisterBusyOnce();
 
   return (
-    <form
-      action={formAction}
-      onChange={() => {
-        if (!isDirty) setIsDirty(true);
-      }}
-      className="flex flex-col gap-4"
-    >
+    <form action={formAction} onChange={markBusy} className="flex flex-col gap-4">
       <FormErrorBanner state={state} />
 
       <FormField label="Name">

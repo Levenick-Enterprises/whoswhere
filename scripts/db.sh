@@ -24,13 +24,28 @@ PROD_TENANT_NAMES=("demo")
 PROD_TENANT_REFS=("tmhghhqrpmgtzhawafoo")
 
 LINKED_TO_PROD=0
+TRAP_RAN=0
 
 restore_dev_link() {
+  # Idempotent: bash fires both the INT trap and the EXIT trap on Ctrl-C, so
+  # this function gets called twice. Run-once guard keeps the output clean.
+  if [[ "$TRAP_RAN" == "1" ]]; then
+    return
+  fi
+  TRAP_RAN=1
+
   # Only restore if we changed the link away from dev. Keeps usage-error /
   # `push dev` paths silent.
   if [[ "$LINKED_TO_PROD" == "0" ]]; then
     return
   fi
+
+  # Once we've committed to relinking, ignore further interrupts. A half-
+  # completed `supabase link` leaves linked-project.json with project_ref=null,
+  # which is worse than waiting a couple seconds for the link to finish.
+  # supabase link is fast; if it ever hangs you can kill -9 the bash process.
+  trap '' INT TERM
+
   echo ""
   echo "→ Re-linking Supabase CLI to dev (${DEV_REF})..."
   supabase link --project-ref "${DEV_REF}" >/dev/null 2>&1 || true

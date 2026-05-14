@@ -74,7 +74,9 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
                 person={person}
                 action={
                   <AssignButton
-                    action={reassignPersonAction.bind(null, person.id, null)}
+                    action={reassignPersonAction}
+                    personId={person.id}
+                    jobsiteId={null}
                     label="Remove"
                     variant="danger"
                   />
@@ -94,7 +96,9 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
                 person={person}
                 action={
                   <AssignButton
-                    action={reassignPersonAction.bind(null, person.id, jobsiteId)}
+                    action={reassignPersonAction}
+                    personId={person.id}
+                    jobsiteId={jobsiteId}
                     label="Add to crew"
                   />
                 }
@@ -114,7 +118,9 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
                 badge={person.current_jobsite?.name}
                 action={
                   <AssignButton
-                    action={reassignPersonAction.bind(null, person.id, jobsiteId)}
+                    action={reassignPersonAction}
+                    personId={person.id}
+                    jobsiteId={jobsiteId}
                     label="Move here"
                     variant="secondary"
                   />

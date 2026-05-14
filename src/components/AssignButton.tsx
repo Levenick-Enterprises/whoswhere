@@ -1,6 +1,10 @@
 "use client";
 
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+
+import { FormErrorBanner } from "@/components/FormErrorBanner";
+import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 
 type Variant = "primary" | "secondary" | "danger";
 
@@ -13,20 +17,33 @@ const variants: Record<Variant, string> = {
     "border border-red-200 bg-white text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-zinc-950 dark:text-red-400 dark:hover:bg-red-950",
 };
 
+/**
+ * Mini-form button that calls a server action via useActionState.
+ * Pass personId + jobsiteId (or null to unassign); they're emitted as
+ * hidden inputs so the action can read them from FormData.
+ */
 export function AssignButton({
   action,
+  personId,
+  jobsiteId,
   label,
   pendingLabel,
   variant = "primary",
 }: {
-  action: () => Promise<void>;
+  action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
+  personId: string;
+  jobsiteId: string | null;
   label: string;
   pendingLabel?: string;
   variant?: Variant;
 }) {
+  const [state, formAction] = useActionState(action, ACTION_OK);
   return (
-    <form action={action}>
+    <form action={formAction} className="flex flex-col gap-2">
+      <input type="hidden" name="personId" value={personId} />
+      <input type="hidden" name="jobsiteId" value={jobsiteId ?? ""} />
       <AssignSubmit label={label} pendingLabel={pendingLabel ?? `${label}…`} variant={variant} />
+      <FormErrorBanner state={state} />
     </form>
   );
 }

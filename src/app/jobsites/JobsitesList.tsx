@@ -24,7 +24,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { reassignPersonAction } from "@/app/people/actions";
+import { reassignPerson } from "@/app/people/actions";
+import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { useDragDelayMs } from "@/lib/usePrefs";
 
@@ -44,6 +45,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
+  const [dragError, setDragError] = useState<string | null>(null);
   const openPerson = useCallback((id: string) => router.push(`/people/${id}`), [router]);
 
   const [optimisticPeople, applyOptimisticUpdate] = useOptimistic(
@@ -115,14 +117,15 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
 
     startTransition(async () => {
       applyOptimisticUpdate({ personId, jobsiteId: targetJobsiteId });
-      try {
-        await reassignPersonAction(personId, targetJobsiteId);
-      } catch (err) {
+      const result = await reassignPerson(personId, targetJobsiteId);
+      if (!result.ok) {
         // The optimistic state has already jumped the pill to its new spot.
-        // On failure, force a server re-render so the UI reverts to truth
-        // rather than leaving the lie in place.
-        console.error("reassignPerson failed; refreshing from server", err);
+        // Surface the failure and force a server re-render so the UI reverts
+        // to truth rather than leaving the lie in place.
+        setDragError(result.message);
         router.refresh();
+      } else {
+        setDragError(null);
       }
     });
   }
@@ -138,6 +141,8 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col gap-4">
+        <FormErrorBanner state={dragError} />
+
         <input
           type="search"
           inputMode="search"

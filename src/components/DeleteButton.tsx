@@ -1,24 +1,31 @@
 "use client";
 
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+
+import { FormErrorBanner } from "@/components/FormErrorBanner";
+import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 
 export function DeleteButton({
   action,
   confirmMessage,
 }: {
-  action: () => Promise<void>;
+  action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
   confirmMessage: string;
 }) {
+  const [state, formAction] = useActionState(action, ACTION_OK);
   return (
     <form
-      action={action}
+      action={formAction}
       onSubmit={(e) => {
         if (!window.confirm(confirmMessage)) {
           e.preventDefault();
         }
       }}
+      className="flex flex-col gap-2"
     >
       <DeleteSubmit />
+      <FormErrorBanner state={state} />
     </form>
   );
 }

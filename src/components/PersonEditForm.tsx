@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 
 import { DeleteButton } from "@/components/DeleteButton";
 import { DetailIconRow } from "@/components/DetailIconRow";
 import { EditModeControls } from "@/components/EditModeControls";
+import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
 import { BriefcaseIcon, FileTextIcon, PhoneIcon } from "@/components/icons";
+import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { telHref } from "@/lib/links";
 
 type Person = {
@@ -17,14 +19,16 @@ type Person = {
   notes: string | null;
 };
 
+type FormAction = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
+
 export function PersonEditForm({
   person,
   updateAction,
   deleteAction,
 }: {
   person: Person;
-  updateAction: (formData: FormData) => Promise<void>;
-  deleteAction: () => Promise<void>;
+  updateAction: FormAction;
+  deleteAction: FormAction;
 }) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -102,11 +106,15 @@ function EditFields({
   onCancel,
 }: {
   person: Person;
-  updateAction: (formData: FormData) => Promise<void>;
+  updateAction: FormAction;
   onCancel: () => void;
 }) {
+  const [state, formAction] = useActionState(updateAction, ACTION_OK);
+
   return (
-    <form action={updateAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-4">
+      <FormErrorBanner state={state} />
+
       <FormField label="Name">
         <input
           type="text"

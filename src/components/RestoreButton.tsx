@@ -1,11 +1,21 @@
 "use client";
 
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-export function RestoreButton({ action }: { action: () => Promise<void> }) {
+import { FormErrorBanner } from "@/components/FormErrorBanner";
+import { ACTION_OK, type ActionResult } from "@/lib/action-result";
+
+export function RestoreButton({
+  action,
+}: {
+  action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
+}) {
+  const [state, formAction] = useActionState(action, ACTION_OK);
   return (
-    <form action={action}>
+    <form action={formAction} className="flex flex-col gap-2">
       <RestoreSubmit />
+      <FormErrorBanner state={state} />
     </form>
   );
 }

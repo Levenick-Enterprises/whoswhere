@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
+import { type ActionResult } from "@/lib/action-result";
 import { personInputSchema } from "@/lib/schemas/person";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
-  return personInputSchema.parse({
+  return personInputSchema.safeParse({
     name: formData.get("name") ?? "",
     position: formData.get("position") ?? "",
     phone: formData.get("phone") ?? "",
@@ -15,26 +16,43 @@ function parseFormData(formData: FormData) {
   });
 }
 
-export async function createPersonAction(formData: FormData) {
-  const input = parseFormData(formData);
+export async function createPersonAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = parseFormData(formData);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("people").insert(input).select("id").single();
+  const { data, error } = await supabase.from("people").insert(parsed.data).select("id").single();
 
   if (error) {
-    throw new Error(`createPerson failed: ${JSON.stringify(error)}`);
+    console.error("[createPerson] supabase:", error);
+    return { ok: false, message: "Couldn't create. Please try again." };
   }
 
   revalidatePath("/people");
   redirect(`/people/${data.id}`);
 }
 
-export async function updatePersonAction(id: string, formData: FormData) {
-  const input = parseFormData(formData);
+export async function updatePersonAction(
+  id: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = parseFormData(formData);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("people").update(input).eq("id", id);
+  const { error } = await supabase.from("people").update(parsed.data).eq("id", id);
 
   if (error) {
-    throw new Error(`updatePerson failed: ${JSON.stringify(error)}`);
+    console.error("[updatePerson] supabase:", error);
+    return { ok: false, message: "Couldn't save. Please try again." };
   }
 
   revalidatePath("/people");
@@ -42,7 +60,11 @@ export async function updatePersonAction(id: string, formData: FormData) {
   redirect(`/people/${id}`);
 }
 
-export async function deletePersonAction(id: string) {
+export async function deletePersonAction(
+  id: string,
+  _prev: ActionResult,
+  _formData: FormData,
+): Promise<ActionResult> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("people")
@@ -50,7 +72,8 @@ export async function deletePersonAction(id: string) {
     .eq("id", id);
 
   if (error) {
-    throw new Error(`deletePerson failed: ${JSON.stringify(error)}`);
+    console.error("[deletePerson] supabase:", error);
+    return { ok: false, message: "Couldn't delete. Please try again." };
   }
 
   revalidatePath("/people");
@@ -59,21 +82,38 @@ export async function deletePersonAction(id: string) {
   redirect("/people");
 }
 
-export async function restorePersonAction(id: string) {
+export async function restorePersonAction(
+  id: string,
+  _prev: ActionResult,
+  _formData: FormData,
+): Promise<ActionResult> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("people").update({ archived_at: null }).eq("id", id);
 
   if (error) {
-    throw new Error(`restorePerson failed: ${JSON.stringify(error)}`);
+    console.error("[restorePerson] supabase:", error);
+    return { ok: false, message: "Couldn't restore. Please try again." };
   }
 
   revalidatePath("/people");
   revalidatePath("/trash");
+  return { ok: true, value: undefined };
 }
 
-async function assignPerson(personId: string, jobsiteId: string | null) {
+/**
+ * Direct-call shape used by the DnD board in `JobsitesList`. Sets a person's
+ * current_jobsite_id (or null to unassign). Validates that the person exists
+ * and is active, AND that the target jobsite (if any) is also active —
+ * otherwise the assignment would silently land them on an archived row that
+ * the UI filters out.
+ */
+export async function reassignPerson(
+  personId: string,
+  jobsiteId: string | null,
+): Promise<ActionResult> {
   const supabase = await createSupabaseServerClient();
-  const { data: previous, error: fetchError } = await supabase
+
+  const { data: person, error: fetchError } = await supabase
     .from("people")
     .select("current_jobsite_id")
     .eq("id", personId)
@@ -81,10 +121,28 @@ async function assignPerson(personId: string, jobsiteId: string | null) {
     .maybeSingle();
 
   if (fetchError) {
-    throw new Error(`assignPerson lookup failed: ${JSON.stringify(fetchError)}`);
+    console.error("[reassignPerson] person lookup:", fetchError);
+    return { ok: false, message: "Couldn't look up that person. Please try again." };
   }
-  if (!previous) {
-    notFound();
+  if (!person) {
+    return { ok: false, message: "Person not found." };
+  }
+
+  if (jobsiteId !== null) {
+    const { data: jobsite, error: jobsiteFetchError } = await supabase
+      .from("jobsites")
+      .select("id")
+      .eq("id", jobsiteId)
+      .is("archived_at", null)
+      .maybeSingle();
+
+    if (jobsiteFetchError) {
+      console.error("[reassignPerson] jobsite lookup:", jobsiteFetchError);
+      return { ok: false, message: "Couldn't verify the target jobsite. Please try again." };
+    }
+    if (!jobsite) {
+      return { ok: false, message: "That jobsite is archived or no longer exists." };
+    }
   }
 
   const { error } = await supabase
@@ -93,25 +151,31 @@ async function assignPerson(personId: string, jobsiteId: string | null) {
     .eq("id", personId);
 
   if (error) {
-    throw new Error(`assignPerson failed: ${JSON.stringify(error)}`);
+    console.error("[reassignPerson] update:", error);
+    return { ok: false, message: "Couldn't reassign. Please try again." };
   }
 
   revalidatePath("/people");
   revalidatePath("/jobsites");
   revalidatePath(`/people/${personId}`);
   if (jobsiteId) revalidatePath(`/jobsites/${jobsiteId}`);
-  if (previous.current_jobsite_id && previous.current_jobsite_id !== jobsiteId) {
-    revalidatePath(`/jobsites/${previous.current_jobsite_id}`);
+  if (person.current_jobsite_id && person.current_jobsite_id !== jobsiteId) {
+    revalidatePath(`/jobsites/${person.current_jobsite_id}`);
   }
+
+  return { ok: true, value: undefined };
 }
 
 /**
- * Sets a person's current_jobsite_id (or null to unassign). No redirect —
- * callers stay on their current page and rely on revalidatePath for
- * downstream refresh. The DnD magnet board uses this with useOptimistic;
- * the assign pickers use it via a plain form submit and let the picker
- * page re-render in place after the write.
+ * Form-shape entry used by AssignButton's submit form. Pulls personId and
+ * jobsiteId out of the formData hidden inputs and delegates to reassignPerson.
  */
-export async function reassignPersonAction(personId: string, jobsiteId: string | null) {
-  await assignPerson(personId, jobsiteId);
+export async function reassignPersonAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const personId = String(formData.get("personId") ?? "");
+  const raw = formData.get("jobsiteId");
+  const jobsiteId = raw === "" || raw == null ? null : String(raw);
+  return reassignPerson(personId, jobsiteId);
 }

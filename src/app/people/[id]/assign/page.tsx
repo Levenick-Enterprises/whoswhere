@@ -53,7 +53,9 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
         <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
           <span className="text-sm text-zinc-500">Pull them off this jobsite entirely</span>
           <AssignButton
-            action={reassignPersonAction.bind(null, person.id, null)}
+            action={reassignPersonAction}
+            personId={person.id}
+            jobsiteId={null}
             label="Unassign"
             variant="secondary"
           />
@@ -88,7 +90,9 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
                   </Link>
                 ) : (
                   <AssignButton
-                    action={reassignPersonAction.bind(null, person.id, jobsite.id)}
+                    action={reassignPersonAction}
+                    personId={person.id}
+                    jobsiteId={jobsite.id}
                     label="Move here"
                   />
                 )}

@@ -5,14 +5,18 @@ import { useActionState } from "react";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
 import { ACTION_OK } from "@/lib/action-result";
+import { useRegisterBusyOnce } from "@/lib/page-busy";
 
 import { createJobsiteAction } from "../actions";
 
 export function NewJobsiteForm() {
   const [state, formAction] = useActionState(createJobsiteAction, ACTION_OK);
+  // Synchronous busy registration on first onChange so a realtime event
+  // can't slip in between the keystroke and the gate (#31).
+  const markBusy = useRegisterBusyOnce();
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onChange={markBusy} className="flex flex-col gap-4">
       <FormErrorBanner state={state} />
 
       <FormField label="Name" hint="What the crew calls it.">

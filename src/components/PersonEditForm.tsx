@@ -10,6 +10,7 @@ import { FormField, inputClass } from "@/components/FormField";
 import { BriefcaseIcon, FileTextIcon, PhoneIcon } from "@/components/icons";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { telHref } from "@/lib/links";
+import { useRegisterBusyOnce } from "@/lib/page-busy";
 
 type Person = {
   id: string;
@@ -110,9 +111,15 @@ function EditFields({
   onCancel: () => void;
 }) {
   const [state, formAction] = useActionState(updateAction, ACTION_OK);
+  // Marks the page busy as soon as the user touches any field. Registration
+  // is synchronous (not via useEffect), so an already-due realtime debounce
+  // timer can't slip in between the keystroke and the registration and wipe
+  // the input on its way through. Release fires on unmount (save redirect
+  // or Cancel) (#31).
+  const markBusy = useRegisterBusyOnce();
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onChange={markBusy} className="flex flex-col gap-4">
       <FormErrorBanner state={state} />
 
       <FormField label="Name">

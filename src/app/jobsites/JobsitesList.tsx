@@ -27,6 +27,7 @@ import {
 import { reassignPerson } from "@/app/people/actions";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
+import { usePageBusyAPI } from "@/lib/page-busy";
 import { useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
@@ -46,6 +47,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
+  const pageBusy = usePageBusyAPI();
   const openPerson = useCallback((id: string) => router.push(`/people/${id}`), [router]);
 
   const [optimisticPeople, applyOptimisticUpdate] = useOptimistic(
@@ -116,16 +118,23 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
     if (!person || person.current_jobsite_id === targetJobsiteId) return;
 
     startTransition(async () => {
+      // Register busy so a remote realtime event doesn't fire router.refresh()
+      // mid-drag and reset the optimistic overlay to a snapshot that doesn't
+      // yet contain this write.
+      const release = pageBusy?.register();
       applyOptimisticUpdate({ personId, jobsiteId: targetJobsiteId });
-      const result = await reassignPerson(personId, targetJobsiteId);
-      if (!result.ok) {
-        // The optimistic state has already jumped the pill to its new spot.
-        // Surface the failure and force a server re-render so the UI reverts
-        // to truth rather than leaving the lie in place.
-        setDragError(result.message);
+      try {
+        const result = await reassignPerson(personId, targetJobsiteId);
+        setDragError(result.ok ? null : result.message);
+      } finally {
+        release?.();
+        // Refresh AFTER release in every branch:
+        //   - Success: the realtime echo for our own write was probably
+        //     skipped while we were busy. The action's revalidatePath should
+        //     have updated the route, but the explicit refresh is cheap
+        //     insurance — keeps useOptimistic's base state in sync.
+        //   - Failure: reverts the optimistic update by re-fetching truth.
         router.refresh();
-      } else {
-        setDragError(null);
       }
     });
   }

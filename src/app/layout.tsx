@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { RealtimeSync } from "@/components/RealtimeSync";
 import { ThemeManager } from "@/components/ThemeManager";
 import { THEME_STORAGE_KEY } from "@/lib/prefsKeys";
 
@@ -58,6 +59,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-full flex-col">
         <ThemeManager />
+        <RealtimeSync />
         <AppHeader />
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 p-4 pb-6">
           {children}

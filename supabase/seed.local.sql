@@ -1,19 +1,34 @@
 -- Local-development + stress-test seed data, loaded automatically by
--- `supabase db reset` against the LOCAL database (the only path this file
--- is intended for).
+-- `pnpm db:reset:local` against the LOCAL Docker stack.
 --
--- ⚠ DESTRUCTIVE — the first two statements wipe `people` and `jobsites`
--- unconditionally. Do NOT apply this file to a remote / production
--- database that contains real crew data. There is no soft-delete safety
--- net here; the rows are gone. If you need to load demo data into a
--- specific remote project, copy the relevant INSERT blocks into a one-off
--- script and run them with eyes open — don't pipe this file through
--- `supabase db query --linked --file …`.
+-- ⚠ DESTRUCTIVE — wipes `people` and `jobsites` unconditionally. Three
+-- layered defenses keep this from ever running against a remote cluster:
+--   1. `scripts/db.sh` is the canonical wrapper for any migration flow
+--      and never invokes `db reset` on a remote.
+--   2. This file is named `seed.local.sql` (vs the CLI's default `seed.sql`)
+--      so accidental discovery is impossible — only `supabase/config.toml`
+--      points at it.
+--   3. The guard block below refuses to execute on any cluster whose
+--      server IP is publicly routable.
 --
 -- ~200 people across 15 Wisconsin-flavored jobsites. Names lean
 -- German / Polish / Scandinavian / Anglo (Wisconsin demographic mix).
 -- Phone numbers are deterministic 555-XXXX. ~10% of crew are
 -- unassigned at any time.
+
+-- Refuse to run on a non-local cluster. Supabase Cloud poolers sit on
+-- public IPs; local Docker is 127.x or 172.x. NULL inet_server_addr()
+-- (Unix-socket connection) passes through — that's local by definition.
+do $$
+begin
+  if inet_server_addr() is not null
+     and not (inet_server_addr() << inet '127.0.0.0/8'
+              or inet_server_addr() << inet '10.0.0.0/8'
+              or inet_server_addr() << inet '172.16.0.0/12'
+              or inet_server_addr() << inet '192.168.0.0/16') then
+    raise exception 'seed.local.sql refuses to run on a non-local cluster (server addr: %)', inet_server_addr();
+  end if;
+end $$;
 
 delete from public.people;
 delete from public.jobsites;

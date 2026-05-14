@@ -41,23 +41,25 @@ The gate is deliberate — accidental merges shouldn't ship half-baked migration
 
 When a real prod tenant needs to come online — e.g. `knutson.whos-where.com` for Curtis's company, Knutson Construction:
 
-1. **Supabase**: create a new project; `supabase link --project-ref <new>`, `supabase db push`. **Do NOT** run `supabase db reset` (no demo seed in prod).
-2. **Vercel**: create a new project linked to this repo. Settings → Git → disable production deployments. Paste the new Supabase URL + secret key into Production env vars. Settings → Domains → add `<tenant>.whos-where.com`.
-3. **Cloudflare DNS**: add `<tenant>.whos-where.com` CNAME → `cname.vercel-dns.com`, DNS-only (grey cloud).
-4. **GitHub repo secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) with the new project's ID.
-5. **`.github/workflows/deploy-prod.yml`**: add `<tenant>` to `inputs.tenant.options` and a matching `case` arm in the resolver step.
+1. **Supabase**: create a new project. Note its `project-ref` from the dashboard URL.
+2. **Register the tenant in two places** (do this BEFORE the bootstrap push so the wrapper can drive it):
+   - `scripts/db.sh` — append `<tenant>` to `PROD_TENANT_NAMES` and the matching ref to `PROD_TENANT_REFS` at the same index.
+   - `.github/workflows/deploy-prod.yml` — add `<tenant>` to `inputs.tenant.options` and a matching `case` arm in the resolver step.
+3. **Bootstrap push**: `./scripts/db.sh push <tenant>`. The wrapper handles the link → push → relink-to-dev dance for the initial push too, so the CLI never gets stuck on the new prod tenant.
+4. **Vercel**: create a new project linked to this repo. Settings → Git → disable production deployments. Paste the new Supabase URL + secret key into Production env vars. Settings → Domains → add `<tenant>.whos-where.com`.
+5. **Cloudflare DNS**: add `<tenant>.whos-where.com` CNAME → `cname.vercel-dns.com`, DNS-only (grey cloud).
+6. **GitHub repo secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) with the new project's ID.
 
 ### Applying schema migrations across tenants
 
-Migrations live in `supabase/migrations/`. The dev DB auto-receives them via `pnpm db:push` while the supabase CLI is linked to the dev project (default state). For each prod tenant, after merging schema changes to `main` and before firing the deploy action:
+Migrations live in `supabase/migrations/`. Use `scripts/db.sh` — it confirms before targeting prod, and always re-links the CLI back to dev on exit (even on error or Ctrl-C), so a stale prod link can't leak into a later session.
 
 ```sh
-supabase link --project-ref <tenant-ref>
-pnpm db:push
-supabase link --project-ref <dev-ref>   # restore the dev link
+pnpm db:push                       # dev (wraps ./scripts/db.sh push dev)
+./scripts/db.sh push demo          # any prod tenant; prompts for confirmation
 ```
 
-Once a second tenant ships, wrap this in `scripts/push-prod-migrations.sh` that loops over a list of refs.
+The tenant list lives in `scripts/db.sh`'s `PROD_TENANT_NAMES` / `PROD_TENANT_REFS` arrays and mirrors `.github/workflows/deploy-prod.yml`'s case arms — both must be updated when adding a new tenant (see "Adding a new tenant" → step 5).
 
 ### Auth + multi-tenant security
 
@@ -72,14 +74,13 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
 **Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
-2. Push the `enable_authed_access` migration (alongside any other pending schema): `supabase link --project-ref <ref> && pnpm db:push && supabase link --project-ref <dev-ref>`.
+2. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
 3. Vercel project → Settings → Environment Variables: set `ALLOWED_EMAILS` (Production scope, comma-separated) to the addresses authorized for this tenant.
 
 ### Deferred ops
 
 - `whos-where.com` apex — no record yet; visitors hit Cloudflare's default. Revisit when there's actual landing-page content.
 - Branch-named preview subdomains (`<branch>.dev.whos-where.com` or `pr1337.dev.whos-where.com`) — issue #20. Needs a GH Action that aliases each preview deploy. For now, use Vercel's auto `*.vercel.app` URLs.
-- `scripts/push-prod-migrations.sh` — multi-tenant migration helper. Worth writing when tenant #2 is real.
 
 ## PR Workflow
 

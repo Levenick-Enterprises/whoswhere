@@ -10,8 +10,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset --linked",
+    "db:push": "./scripts/db.sh push dev",
+    "db:reset:local": "supabase db reset",
     "gen:types": "supabase gen types typescript --linked > src/lib/supabase/types.ts"
   },
   "dependencies": {

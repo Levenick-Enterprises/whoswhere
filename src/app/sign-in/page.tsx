@@ -45,7 +45,7 @@ export default async function SignInPage({
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="text-sm text-zinc-500">
-          Email-based sign-in for the foreman of this tenant. Type the 6-digit code we send you, or
+          Email-based sign-in for the foreman of this tenant. Type the one-time code we send you, or
           open the link in the email.
         </p>
       </header>
@@ -54,7 +54,7 @@ export default async function SignInPage({
         <div className={cardClass} role="status" aria-live="polite">
           <p className="text-sm">
             If that email is on the allowlist for this tenant, an email is on its way with both a
-            6-digit code and a sign-in link. Enter the code below, or open the link on this device.
+            one-time code and a sign-in link. Enter the code below, or open the link on this device.
           </p>
           {lastEmail && (
             <p className="text-xs text-zinc-500">
@@ -67,16 +67,16 @@ export default async function SignInPage({
           <form action={verifyOtpAction} className="flex flex-col gap-3 pt-2">
             <input type="hidden" name="next" value={next} />
             <FormField
-              label="6-digit code"
-              hint="From the email — or paste from your password manager."
+              label="One-time code"
+              hint="Copy from the email — or paste from your password manager."
             >
               <input
                 name="code"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                pattern="[0-9]{6,10}"
+                maxLength={10}
                 autoFocus
                 required
                 className={`${inputClass} tracking-[0.4em] font-mono text-center`}

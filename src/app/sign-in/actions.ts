@@ -109,7 +109,10 @@ export async function verifyOtpAction(formData: FormData) {
   const code = String(formData.get("code") ?? "").trim();
   const next = safeNext(String(formData.get("next") ?? ""));
 
-  if (!email || !/^\d{6}$/.test(code)) {
+  // Supabase OTPs are configurable per-project (6–10 digits). Accept the
+  // whole range here and let supabase.auth.verifyOtp reject anything wrong;
+  // we only gate on shape ("looks like a numeric OTP") before the API call.
+  if (!email || !/^\d{6,10}$/.test(code)) {
     redirect(buildSentUrl(next, { invalid: true }));
   }
 

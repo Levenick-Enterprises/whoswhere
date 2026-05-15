@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
+import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
 
@@ -45,12 +46,7 @@ export function NewJobsiteForm() {
         <textarea name="notes" rows={3} maxLength={2000} className={inputClass} />
       </FormField>
 
-      <button
-        type="submit"
-        className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-      >
-        Create
-      </button>
+      <SubmitButton label="Create" pendingLabel="Creating…" />
     </form>
   );
 }

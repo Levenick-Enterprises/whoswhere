@@ -111,8 +111,7 @@ export default async function MorePage() {
  * inlines them at compile time so they survive force-dynamic rendering. */
 function buildLabel(): string {
   const sha = process.env.NEXT_PUBLIC_BUILD_SHA?.slice(0, 7) || null;
-  const message = process.env.NEXT_PUBLIC_BUILD_MESSAGE ?? "";
-  const prNumber = message.match(/\(#(\d+)\)/)?.[1];
+  const prNumber = process.env.NEXT_PUBLIC_BUILD_PR_NUM || null;
 
   if (prNumber && sha) return `Build: ${prNumber} (${sha})`;
   if (sha) return `Build: ${sha}`;

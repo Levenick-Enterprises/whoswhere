@@ -15,7 +15,8 @@ on:
         options:
           - demo
           # Future tenants get added here AND get a matching
-          # VERCEL_PROJECT_ID_<NAME> repo secret + a `case` arm below.
+          # VERCEL_PROJECT_ID_<NAME> environment secret (under the `production`
+          # environment) + a `case` arm below.
 
 concurrency:
   # Serialize deploys per tenant — a second click while one is in flight
@@ -72,7 +73,7 @@ jobs:
               ;;
           esac
           if [ -z "$PROJECT_ID" ]; then
-            echo "Missing VERCEL_PROJECT_ID_${{ github.event.inputs.tenant }} repo secret" >&2
+            echo "Missing VERCEL_PROJECT_ID_${{ github.event.inputs.tenant }} environment secret (production env)" >&2
             exit 1
           fi
           echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"

@@ -19,9 +19,15 @@ const nextConfig: NextConfig = {
   // appears — works regardless of whether the page is force-dynamic.
   // Vercel sets VERCEL_GIT_* natively on the dev project's git deploys;
   // deploy-prod.yml sets them explicitly for tenant CLI deploys.
+  //
+  // We extract the PR number from the commit message at build time rather
+  // than shipping the whole subject to the client — keeps the bundle a
+  // little smaller and avoids the future temptation to render the raw
+  // commit message (which would be an XSS surface, since commit subjects
+  // are untrusted text).
   env: {
     NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-    NEXT_PUBLIC_BUILD_MESSAGE: process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "",
+    NEXT_PUBLIC_BUILD_PR_NUM: process.env.VERCEL_GIT_COMMIT_MESSAGE?.match(/\(#(\d+)\)/)?.[1] ?? "",
   },
 };
 

@@ -96,7 +96,7 @@ Tenants are addressed by their display name: `dev` (project `whoswhere-dev`), `d
 
 Each tenant Supabase project IS the auth realm — sessions don't cross tenant boundaries because each project has its own `auth.users` table and its own session cookies (tied to the project's domain).
 
-**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp` to send a magic link. The post-submit screen is identical regardless of allowlist outcome (no enumeration). Clicking the link hits `/auth/callback`, which exchanges the code for a session cookie and lands the user on `/jobsites`. `/sign-out` (POST) clears the session.
+**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp`. The email contains both a magic link AND a 6-digit code; either verifies. Operators can type the code into the `?sent=1` form (mobile-recommended — same browser tab, immune to mail prefetchers consuming the link), or click the link → `/auth/callback` exchanges the code for a session cookie. The post-submit screen is identical regardless of allowlist outcome (no enumeration). `/sign-out` (POST) clears the session.
 
 **Where the gate lives.** `src/middleware.ts` refreshes the cookie on every request and redirects unauthenticated traffic to `/sign-in`. Server components, server actions, and route handlers use `createSupabaseServerClient()` from `src/lib/supabase/server.ts` (cookie-backed, RLS-aware). The legacy `createAdminClient()` (secret-key, RLS-bypassing) in `src/lib/supabase/admin.ts` is kept around as a server-only escape hatch but is not referenced by any route after #2 — reserve it for future bulk imports / scripts / webhooks.
 
@@ -105,8 +105,15 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
 **Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
-2. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
-3. Vercel project → Settings → Environment Variables, **Production scope only**:
+2. Supabase dashboard → Authentication → Email Templates → Magic Link: edit the body to surface `{{ .Token }}` (the 6-digit code) alongside the existing `{{ .ConfirmationURL }}` link. The default template only shows the link; without this step the `/sign-in?sent=1` form has nothing to verify against. Suggested body:
+   ```
+   Sign in to whoswhere.
+   Click this link: {{ .ConfirmationURL }}
+   Or enter this code on the sign-in page: {{ .Token }}
+   This code expires in 1 hour.
+   ```
+3. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
+4. Vercel project → Settings → Environment Variables, **Production scope only**:
    - `ALLOWED_EMAILS` — comma-separated addresses authorized for this tenant.
    - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
 

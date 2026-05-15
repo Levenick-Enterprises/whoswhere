@@ -27,6 +27,13 @@ function isWithinCooldown(sentAtRaw: string | undefined): boolean {
   return Date.now() - sentAt < RESEND_COOLDOWN_SECONDS * 1000;
 }
 
+function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
+  const search = new URLSearchParams({ sent: "1" });
+  if (opts.invalid) search.set("invalid", "1");
+  if (next !== "/jobsites") search.set("next", next);
+  return `/sign-in?${search.toString()}`;
+}
+
 /**
  * Sends a magic-link OTP to the submitted email, but only if it appears in
  * the per-tenant ALLOWED_EMAILS allowlist. We always redirect to the same
@@ -79,7 +86,40 @@ export async function requestMagicLinkAction(formData: FormData) {
     cookieStore.set(SIGNIN_SENT_AT_COOKIE, String(Date.now()), cookieOptions);
   }
 
-  const search = new URLSearchParams({ sent: "1" });
-  if (next !== "/jobsites") search.set("next", next);
-  redirect(`/sign-in?${search.toString()}`);
+  redirect(buildSentUrl(next));
+}
+
+/**
+ * Verifies a 6-digit OTP code typed into the /sign-in?sent=1 form. The code
+ * is the parallel path to the magic-link click: same email, same token,
+ * different verification mechanism. Lets the operator finish sign-in in
+ * the same browser tab they typed their email into — no mail-app to-and-
+ * fro, and immune to URL prefetchers that consume single-use magic-link
+ * tokens before the human can click.
+ *
+ * Email is read from the `signin_email` cookie set by requestMagicLinkAction.
+ * If the cookie is missing or the code shape is wrong, redirect back with
+ * the generic invalid state — no need to differentiate (same UX, same
+ * non-enumeration posture). Supabase enforces its own attempt rate-limit
+ * on verifyOtp so we don't need an additional cooldown here.
+ */
+export async function verifyOtpAction(formData: FormData) {
+  const cookieStore = await cookies();
+  const email = cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "";
+  const code = String(formData.get("code") ?? "").trim();
+  const next = safeNext(String(formData.get("next") ?? ""));
+
+  if (!email || !/^\d{6}$/.test(code)) {
+    redirect(buildSentUrl(next, { invalid: true }));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+
+  if (error) {
+    console.error("[sign-in] verifyOtp rejected:", error);
+    redirect(buildSentUrl(next, { invalid: true }));
+  }
+
+  redirect(next);
 }

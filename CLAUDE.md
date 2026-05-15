@@ -96,7 +96,9 @@ Tenants are addressed by their display name: `dev` (project `whoswhere-dev`), `d
 
 Each tenant Supabase project IS the auth realm — sessions don't cross tenant boundaries because each project has its own `auth.users` table and its own session cookies (tied to the project's domain).
 
-**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp` to send a magic link. The post-submit screen is identical regardless of allowlist outcome (no enumeration). Clicking the link hits `/auth/callback`, which exchanges the code for a session cookie and lands the user on `/jobsites`. `/sign-out` (POST) clears the session.
+**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp`. The email contains a numeric one-time code (length set per-project in Supabase Auth → Providers → Email, default 8). Operator types the code into the `?sent=1` form, which calls `verifyOtp` server-side and mints a session cookie. The post-submit screen is identical regardless of allowlist outcome (no enumeration). `/sign-out` (POST) clears the session.
+
+**Why no magic link in the email body.** Supabase's `signInWithOtp` generates a single token that backs both the typed code and the `{{ .ConfirmationURL }}` link. Mail prefetchers (Gmail, Apple Mail, spam scanners) follow the link's URL on receipt — that hit consumes the single-use token, after which typing the code also fails. Omitting `{{ .ConfirmationURL }}` from the Supabase email template eliminates the URL surface that prefetchers can attack while leaving the verify endpoint intact. The `/auth/callback` route and `emailRedirectTo` option in `signInWithOtp` are kept alive defensively — they cost nothing, handle in-flight emails sent before a template change, and preserve a re-enable path without code changes.
 
 **Where the gate lives.** `src/middleware.ts` refreshes the cookie on every request and redirects unauthenticated traffic to `/sign-in`. Server components, server actions, and route handlers use `createSupabaseServerClient()` from `src/lib/supabase/server.ts` (cookie-backed, RLS-aware). The legacy `createAdminClient()` (secret-key, RLS-bypassing) in `src/lib/supabase/admin.ts` is kept around as a server-only escape hatch but is not referenced by any route after #2 — reserve it for future bulk imports / scripts / webhooks.
 
@@ -105,8 +107,19 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
 **Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
-2. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
-3. Vercel project → Settings → Environment Variables, **Production scope only**:
+2. Supabase dashboard → Authentication → Sign In / Up: **toggle OFF "Confirm email"**. Default is ON, which sends a separate "Confirm signup" email on first auth for any new user (uses a different template than "Magic Link", customizing only Magic Link leaves the first send broken). `ALLOWED_EMAILS` is already the gate that vets who can sign in, so the confirm-signup step is redundant for whoswhere — turning it off means first-send and nth-send both use the Magic Link template, so there's only one template to customize.
+3. Supabase dashboard → Authentication → Email Templates → Magic Link: replace the default body (which is just the link) with a code-first template. **Omit `{{ .ConfirmationURL }}` entirely** to deny mail prefetchers a URL to consume — see "Why no magic link in the email body" above. Suggested subject + body (the code-first ordering also gets the code into the lock-screen preview AND maximizes iOS one-time-code autofill from `<input autocomplete="one-time-code">`):
+
+   ```
+   Subject: {{ .Token }} is your whoswhere sign-in code
+
+   Body:
+   {{ .Token }} is your whoswhere sign-in code.
+   This code expires in 1 hour.
+   ```
+
+4. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
+5. Vercel project → Settings → Environment Variables, **Production scope only**:
    - `ALLOWED_EMAILS` — comma-separated addresses authorized for this tenant.
    - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
 

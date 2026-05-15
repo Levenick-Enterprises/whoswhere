@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 
+import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
+import { SubmitButton } from "@/components/SubmitButton";
 import { safeNext } from "@/lib/origin";
 
-import { requestMagicLinkAction } from "./actions";
+import { requestSignInCodeAction, verifyOtpAction } from "./actions";
 import { RESEND_COOLDOWN_SECONDS, SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
 import { ResendButton } from "./ResendButton";
 
@@ -24,11 +26,12 @@ function computeResendSecondsLeft(sentAt: number | null): number {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string; next?: string }>;
+  searchParams: Promise<{ sent?: string; error?: string; invalid?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const sent = params.sent === "1";
   const callbackError = params.error === "callback";
+  const invalidCode = params.invalid === "1";
   const next = safeNext(params.next);
 
   const cookieStore = await cookies();
@@ -41,22 +44,49 @@ export default async function SignInPage({
     <section className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-sm text-zinc-500">Magic-link sign-in for the foreman of this tenant.</p>
+        <p className="text-sm text-zinc-500">
+          Email-based sign-in for the foreman of this tenant. We&apos;ll send a one-time code to
+          type here.
+        </p>
       </header>
 
       {sent ? (
         <div className={cardClass} role="status" aria-live="polite">
           <p className="text-sm">
-            If that email is on the allowlist for this tenant, a magic link is on its way. Open it
-            on this device to finish signing in.
+            If that email is on the allowlist for this tenant, a one-time code is on its way. Enter
+            it below to sign in.
           </p>
           {lastEmail && (
             <p className="text-xs text-zinc-500">
               Sent to{" "}
               <span className="font-medium text-zinc-700 dark:text-zinc-300">{lastEmail}</span>.
-              Links expire after about an hour.
+              Expires after about an hour.
             </p>
           )}
+
+          <form action={verifyOtpAction} className="flex flex-col gap-3 pt-2">
+            <input type="hidden" name="next" value={next} />
+            <FormField
+              label="One-time code"
+              hint="Copy from the email — or paste from your password manager."
+            >
+              <input
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6,10}"
+                maxLength={10}
+                autoFocus
+                required
+                className={`${inputClass} tracking-[0.4em] font-mono text-center`}
+              />
+            </FormField>
+            {invalidCode && (
+              <FormErrorBanner state="That code didn't work — check your email or request a new one." />
+            )}
+            <SubmitButton label="Verify" pendingLabel="Verifying…" />
+          </form>
 
           <div className="flex items-center justify-between gap-3 pt-2">
             {lastEmail ? (
@@ -73,7 +103,7 @@ export default async function SignInPage({
           </div>
         </div>
       ) : (
-        <form action={requestMagicLinkAction} className={cardClass}>
+        <form action={requestSignInCodeAction} className={cardClass}>
           <input type="hidden" name="next" value={next} />
           <FormField label="Email" hint="The address an admin allowlisted for this tenant.">
             <input
@@ -97,7 +127,7 @@ export default async function SignInPage({
             type="submit"
             className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
           >
-            Send magic link
+            Send sign-in email
           </button>
         </form>
       )}

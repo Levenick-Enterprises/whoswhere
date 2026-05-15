@@ -5,22 +5,28 @@ import { headers } from "next/headers";
 const LOCAL_HOST_RE = /^(localhost(:\d+)?|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
 /**
- * Returns the client-facing origin (proto + host) for the current request,
- * derived from request headers rather than the underlying TCP connection.
+ * Returns the client-facing origin (proto + host) for the current request.
  *
- * Necessary for Cloudflare Tunnel and any reverse-proxy setup where the
- * actual server-side connection is HTTP-to-localhost but the public URL is
- * `https://<public-host>`. Reading `request.url` in that environment yields
- * `http://localhost:3000/...`, which causes user-facing redirects to point
- * back at the dev machine — unreachable from any other device.
+ * Two paths:
  *
- * Trusted headers: `x-forwarded-host` (set by proxies) falls back to `host`.
- * We don't trust `x-forwarded-proto` because Cloudflared sends `http` for
- * the internal leg even when the client used HTTPS; instead we infer the
- * scheme from the host shape (RFC1918 / localhost → http, everything else
- * → https).
+ *   1. **Env-pinned** (production): if `APP_ORIGIN` is set, return it as-is.
+ *      Removes any dependency on possibly-spoofable proxy headers. Set this
+ *      per-Vercel-project on the Production scope only — preview deployments
+ *      get unique URLs that the header-inference path handles correctly.
+ *
+ *   2. **Header-inferred** (local dev, previews, anywhere `APP_ORIGIN` is
+ *      unset): reads `x-forwarded-host` (set by proxies) falling back to
+ *      `host`. Necessary for Cloudflare Tunnel and reverse-proxy setups
+ *      where the actual server-side connection is HTTP-to-localhost but the
+ *      public URL is `https://<public-host>`. Scheme is inferred from the
+ *      host shape (RFC1918 / localhost → http, everything else → https);
+ *      we don't trust `x-forwarded-proto` because Cloudflared sends `http`
+ *      for the internal leg even when the client used HTTPS.
  */
 export async function publicOrigin(): Promise<string> {
+  const pinned = process.env.APP_ORIGIN;
+  if (pinned) return pinned;
+
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   if (!host) throw new Error("Cannot determine request origin (no host header).");

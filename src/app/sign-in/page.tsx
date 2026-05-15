@@ -5,12 +5,10 @@ import { FormField, inputClass } from "@/components/FormField";
 import { safeNext } from "@/lib/origin";
 
 import { requestMagicLinkAction } from "./actions";
-import { SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
+import { RESEND_COOLDOWN_SECONDS, SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
 import { ResendButton } from "./ResendButton";
 
 export const dynamic = "force-dynamic";
-
-const RESEND_COOLDOWN_SECONDS = 30;
 
 const cardClass =
   "flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950";

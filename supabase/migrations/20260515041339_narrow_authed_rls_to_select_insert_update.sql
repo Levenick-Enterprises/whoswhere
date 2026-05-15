@@ -14,11 +14,16 @@
 -- migration, so any future bulk-import / admin tooling that legitimately
 -- needs DELETE can use the secret-key path via createAdminClient().
 --
--- Idempotent: uses `drop policy if exists` + create. Re-running the
--- migration would no-op cleanly.
+-- Idempotent: every policy this migration touches is dropped-if-exists
+-- before any create, so a partial-apply recovery or accidental re-run
+-- lands in the same end state with no errors.
 
 drop policy if exists "authed_modify_jobsites" on public.jobsites;
 drop policy if exists "authed_modify_people" on public.people;
+drop policy if exists "authed_insert_jobsites" on public.jobsites;
+drop policy if exists "authed_update_jobsites" on public.jobsites;
+drop policy if exists "authed_insert_people" on public.people;
+drop policy if exists "authed_update_people" on public.people;
 
 create policy "authed_insert_jobsites" on public.jobsites
   for insert to authenticated with check (true);

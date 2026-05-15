@@ -121,12 +121,19 @@ async function listWhoswhereProjects(token: string): Promise<VercelProject[]> {
 }
 
 async function getAllowedEmailsEnv(projectId: string, token: string): Promise<AllowedEmailsResult> {
-  const data = await vercelApi<{ envs: VercelEnv[] }>(`/v10/projects/${projectId}/env`, {}, token);
-  const env = data.envs.find(
+  // Two-call read. The list endpoint returns the V2 ciphertext envelope
+  // ({"v":"V2","c":"..."}) for `encrypted`-type vars regardless of
+  // `?decrypt=true`, but the singular env endpoint at
+  // /v1/projects/{id}/env/{envId} is documented as "retrieve the decrypted
+  // value" and reliably returns plaintext. Discover the envId from the list,
+  // then fetch the singular entry for the actual value.
+  const list = await vercelApi<{ envs: VercelEnv[] }>(`/v9/projects/${projectId}/env`, {}, token);
+  const meta = list.envs.find(
     (e) => e.key === ALLOWED_EMAILS_KEY && e.target.includes(PRODUCTION_TARGET),
   );
-  if (!env) return { kind: "unset" };
-  if (UNREADABLE_ENV_TYPES.has(env.type)) return { kind: "sensitive", type: env.type };
+  if (!meta) return { kind: "unset" };
+  if (UNREADABLE_ENV_TYPES.has(meta.type)) return { kind: "sensitive", type: meta.type };
+  const env = await vercelApi<VercelEnv>(`/v1/projects/${projectId}/env/${meta.id}`, {}, token);
   const emails = env.value.split(",").map(normalizeEmail).filter(Boolean);
   return { kind: "ok", env, emails };
 }
@@ -252,7 +259,7 @@ async function cmdAddEmail(display: string, rawEmail: string): Promise<void> {
   }
 
   const nextEmails = [...result.emails, email];
-  await vercelApi(`/v10/projects/${project.id}/env/${result.env.id}`, {
+  await vercelApi(`/v9/projects/${project.id}/env/${result.env.id}`, {
     method: "PATCH",
     body: JSON.stringify({ value: nextEmails.join(",") }),
   });

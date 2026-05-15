@@ -90,18 +90,19 @@ export async function requestMagicLinkAction(formData: FormData) {
 }
 
 /**
- * Verifies a 6-digit OTP code typed into the /sign-in?sent=1 form. The code
- * is the parallel path to the magic-link click: same email, same token,
- * different verification mechanism. Lets the operator finish sign-in in
- * the same browser tab they typed their email into — no mail-app to-and-
- * fro, and immune to URL prefetchers that consume single-use magic-link
- * tokens before the human can click.
+ * Verifies a numeric one-time code typed into the /sign-in?sent=1 form.
+ * Mirrors the magic-link click semantically: same email, same Supabase
+ * token under the hood, different delivery mechanism. Lets the operator
+ * finish sign-in in the same browser tab they typed their email into —
+ * no mail-app round-trip, and immune to URL prefetchers that consume
+ * single-use magic-link tokens before the human can click.
  *
  * Email is read from the `signin_email` cookie set by requestMagicLinkAction.
- * If the cookie is missing or the code shape is wrong, redirect back with
- * the generic invalid state — no need to differentiate (same UX, same
- * non-enumeration posture). Supabase enforces its own attempt rate-limit
- * on verifyOtp so we don't need an additional cooldown here.
+ * If the cookie is missing, the code shape is wrong, or the email is no
+ * longer on the allowlist, redirect back with the generic invalid state —
+ * no differentiation (same UX, same non-enumeration posture). Supabase
+ * enforces its own attempt rate-limit on verifyOtp so we don't need an
+ * additional cooldown here.
  */
 export async function verifyOtpAction(formData: FormData) {
   const cookieStore = await cookies();
@@ -113,6 +114,16 @@ export async function verifyOtpAction(formData: FormData) {
   // whole range here and let supabase.auth.verifyOtp reject anything wrong;
   // we only gate on shape ("looks like a numeric OTP") before the API call.
   if (!email || !/^\d{6,10}$/.test(code)) {
+    redirect(buildSentUrl(next, { invalid: true }));
+  }
+
+  // Re-check the allowlist at verify time. requestMagicLinkAction writes
+  // the cookie regardless of allowlist match (the no-enumeration property),
+  // so without this gate someone holding an unexpired OTP for an address
+  // that was previously allowlisted but has since been removed could still
+  // authenticate. Same generic redirect as other failure paths so attempts
+  // remain indistinguishable from invalid codes.
+  if (!parseAllowlist().includes(email)) {
     redirect(buildSentUrl(next, { invalid: true }));
   }
 

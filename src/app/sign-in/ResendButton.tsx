@@ -40,7 +40,7 @@ export function ResendButton({
       disabled={disabled}
       className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
     >
-      {isPending ? "Sending…" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend link"}
+      {isPending ? "Sending…" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend email"}
     </button>
   );
 }

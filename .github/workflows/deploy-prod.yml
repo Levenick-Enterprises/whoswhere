@@ -1,9 +1,9 @@
 name: Deploy to prod tenant
 
 # Manual gate between "main is green on dev" and "the bits are on a prod
-# tenant." Pushing to main only auto-deploys the existing `whoswhere`
-# Vercel project to dev.whos-where.com — every prod tenant has its
-# Vercel git integration DISABLED and waits for this workflow to fire.
+# tenant." Pushing to main only auto-deploys the `whoswhere-dev` Vercel
+# project to dev.whos-where.com — every prod tenant has its Vercel git
+# integration DISABLED and waits for this workflow to fire.
 
 on:
   workflow_dispatch:

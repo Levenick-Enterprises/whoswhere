@@ -10,9 +10,9 @@
 // remove-email, delete-tenant, create-tenant. Out of scope today.
 //
 // Tenant ↔ Vercel project naming convention (matches CLAUDE.md
-// "Deployment topology"):
+// "Deployment topology"). Uniform `whoswhere-<tenant>` shape:
 //
-//   display name `dev`        ↔ Vercel project `whoswhere`
+//   display name `dev`        ↔ Vercel project `whoswhere-dev`
 //   display name `demo`       ↔ Vercel project `whoswhere-demo`
 //   display name `<tenant>`   ↔ Vercel project `whoswhere-<tenant>`
 //
@@ -65,13 +65,12 @@ function isValidEmail(s: string): boolean {
 }
 
 function projectToDisplay(projectName: string): string | null {
-  if (projectName === "whoswhere") return "dev";
   if (projectName.startsWith("whoswhere-")) return projectName.slice("whoswhere-".length);
   return null;
 }
 
 function displayToProject(display: string): string {
-  return display === "dev" ? "whoswhere" : `whoswhere-${display}`;
+  return `whoswhere-${display}`;
 }
 
 function tenantUrl(display: string): string {
@@ -117,7 +116,7 @@ async function listWhoswhereProjects(token: string): Promise<VercelProject[]> {
   // enough. If this ever grows we'll need pagination via the `pagination.next`
   // cursor in the response.
   const data = await vercelApi<{ projects: VercelProject[] }>("/v10/projects", {}, token);
-  return data.projects.filter((p) => p.name === "whoswhere" || p.name.startsWith("whoswhere-"));
+  return data.projects.filter((p) => p.name.startsWith("whoswhere-"));
 }
 
 async function getAllowedEmailsEnv(projectId: string, token: string): Promise<AllowedEmailsResult> {
@@ -266,9 +265,10 @@ async function cmdAddEmail(display: string, rawEmail: string): Promise<void> {
 
   console.log(`Added ${email} to ${display}'s allowlist (${nextEmails.length} total).`);
   console.log(
-    "Vercel will serve the new value on the next function cold start (~5 min). " +
-      "To force-propagate now, redeploy via the Vercel dashboard or, for prod tenants, " +
-      "the 'Deploy to prod tenant' GH workflow.",
+    "Vercel bakes env vars into the build, so a redeploy is needed before the new " +
+      "value takes effect. For dev: hit Redeploy on the project's latest deployment " +
+      "in the Vercel dashboard. For prod tenants: trigger the 'Deploy to prod tenant' " +
+      "GH workflow (which respects the production environment gate).",
   );
 }
 

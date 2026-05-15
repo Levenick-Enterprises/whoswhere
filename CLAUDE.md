@@ -90,7 +90,9 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
 2. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
-3. Vercel project → Settings → Environment Variables: set `ALLOWED_EMAILS` (Production scope, comma-separated) to the addresses authorized for this tenant.
+3. Vercel project → Settings → Environment Variables, **Production scope only**:
+   - `ALLOWED_EMAILS` — comma-separated addresses authorized for this tenant.
+   - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
 
 ### Deferred ops
 

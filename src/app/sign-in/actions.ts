@@ -6,13 +6,25 @@ import { redirect } from "next/navigation";
 import { publicOrigin, safeNext } from "@/lib/origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { SIGNIN_COOKIE_MAX_AGE, SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
+import {
+  RESEND_COOLDOWN_SECONDS,
+  SIGNIN_COOKIE_MAX_AGE,
+  SIGNIN_EMAIL_COOKIE,
+  SIGNIN_SENT_AT_COOKIE,
+} from "./cookies";
 
 function parseAllowlist(): string[] {
   return (process.env.ALLOWED_EMAILS ?? "")
     .split(",")
-    .map((s) => s.trim().toLowerCase())
+    .map((s) => s.trim().normalize("NFKC").toLowerCase())
     .filter(Boolean);
+}
+
+function isWithinCooldown(sentAtRaw: string | undefined): boolean {
+  if (!sentAtRaw) return false;
+  const sentAt = Number(sentAtRaw);
+  if (!Number.isFinite(sentAt)) return false;
+  return Date.now() - sentAt < RESEND_COOLDOWN_SECONDS * 1000;
 }
 
 /**
@@ -32,11 +44,19 @@ export async function requestMagicLinkAction(formData: FormData) {
   const cookieStore = await cookies();
   const formEmail = String(formData.get("email") ?? "")
     .trim()
+    .normalize("NFKC")
     .toLowerCase();
   const rawEmail = formEmail || (cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "");
   const next = safeNext(String(formData.get("next") ?? ""));
 
-  if (rawEmail && parseAllowlist().includes(rawEmail)) {
+  // Server-side cooldown. The UI countdown is client-only and bypassable;
+  // this gate enforces the 30s window even for curl/fetch/devtools attempts.
+  // We still write the cookies + redirect below regardless of whether the
+  // send happened, so the response shape doesn't reveal whether an email
+  // is allowlisted OR whether the request was throttled.
+  const cooldown = isWithinCooldown(cookieStore.get(SIGNIN_SENT_AT_COOKIE)?.value);
+
+  if (!cooldown && rawEmail && parseAllowlist().includes(rawEmail)) {
     const supabase = await createSupabaseServerClient();
     const callbackUrl = new URL(`${await publicOrigin()}/auth/callback`);
     if (next !== "/jobsites") callbackUrl.searchParams.set("next", next);

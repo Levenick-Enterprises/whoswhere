@@ -28,6 +28,12 @@ jobs:
   deploy:
     name: Deploy to ${{ github.event.inputs.tenant }}
     runs-on: ubuntu-latest
+    # Binds to the `production` GitHub environment. The environment's
+    # protection rules (required reviewer + branch restriction to `main`)
+    # are configured in repo Settings → Environments. Secrets used by this
+    # job (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_*) are scoped to
+    # the environment so only this protected job can read them.
+    environment: production
 
     steps:
       - name: Checkout main

@@ -76,6 +76,22 @@ pnpm db:push                       # dev (wraps ./scripts/db.sh push dev)
 
 The tenant list lives in `scripts/db.sh`'s `PROD_TENANT_NAMES` / `PROD_TENANT_REFS` arrays and mirrors `.github/workflows/deploy-prod.yml`'s case arms — both must be updated when adding a new tenant (see "Adding a new tenant" → step 5).
 
+### Managing tenants (`pnpm tenant`)
+
+Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to list tenants and edit per-tenant env vars without dashboard clicks. Phase 1 covers list + add-email; `remove-email`, `delete-tenant`, and `create-tenant` are deferred.
+
+```sh
+pnpm tenant list                                   # table of tenants + URLs + allowlist counts
+pnpm tenant emails <tenant>                        # show ALLOWED_EMAILS for one tenant
+pnpm tenant add-email <tenant> <email@host>        # append an email (idempotent, NFKC-normalized)
+```
+
+Tenants are addressed by their display name: `dev` (project `whoswhere`), `demo` (project `whoswhere-demo`), `<name>` (project `whoswhere-<name>`).
+
+**Token setup.** Generate at https://vercel.com/account/tokens, scope to the `michaellevenick-1933` team, paste into `.env.local` as `VERCEL_API_TOKEN`. Token lives only on your laptop and encodes no persistent state — regenerate any time (lost laptop / rotate). The `.env.local` file is gitignored.
+
+**Why no auto-redeploy.** Adding an email writes the new value to Vercel; warm functions still see the old value until they recycle (~5 min). Auto-redeploying from this CLI would also bypass the `production` GH environment gate (the "required reviewer click" before secrets unlock). That gate exists to keep code deploys deliberate — diluting it for env-var changes weakens it. Live with the cold-start wait, or trigger a deliberate redeploy via the dashboard / `Deploy to prod tenant` workflow when you need to force-propagate.
+
 ### Auth + multi-tenant security
 
 Each tenant Supabase project IS the auth realm — sessions don't cross tenant boundaries because each project has its own `auth.users` table and its own session cookies (tied to the project's domain).

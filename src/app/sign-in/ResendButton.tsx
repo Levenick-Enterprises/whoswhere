@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 
-import { requestMagicLinkAction } from "./actions";
+import { requestSignInCodeAction } from "./actions";
 
 export function ResendButton({
   next,
@@ -29,7 +29,7 @@ export function ResendButton({
     // Email omitted — the server action falls back to the signin_email cookie.
     formData.set("next", next);
     startTransition(() => {
-      void requestMagicLinkAction(formData);
+      void requestSignInCodeAction(formData);
     });
   }
 

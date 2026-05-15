@@ -6,7 +6,7 @@ import { FormField, inputClass } from "@/components/FormField";
 import { SubmitButton } from "@/components/SubmitButton";
 import { safeNext } from "@/lib/origin";
 
-import { requestMagicLinkAction, verifyOtpAction } from "./actions";
+import { requestSignInCodeAction, verifyOtpAction } from "./actions";
 import { RESEND_COOLDOWN_SECONDS, SIGNIN_EMAIL_COOKIE, SIGNIN_SENT_AT_COOKIE } from "./cookies";
 import { ResendButton } from "./ResendButton";
 
@@ -103,7 +103,7 @@ export default async function SignInPage({
           </div>
         </div>
       ) : (
-        <form action={requestMagicLinkAction} className={cardClass}>
+        <form action={requestSignInCodeAction} className={cardClass}>
           <input type="hidden" name="next" value={next} />
           <FormField label="Email" hint="The address an admin allowlisted for this tenant.">
             <input

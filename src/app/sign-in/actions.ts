@@ -35,11 +35,19 @@ function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
 }
 
 /**
- * Sends a magic-link OTP to the submitted email, but only if it appears in
- * the per-tenant ALLOWED_EMAILS allowlist. We always redirect to the same
- * neutral "check your email" state regardless of allowlist outcome so an
- * attacker can't enumerate authorized addresses. `next` carries through from
- * the middleware redirect so the user lands on the originally-requested page.
+ * Sends an email with a numeric one-time sign-in code (and no clickable
+ * link — see CLAUDE.md "Why no magic link in the email body"), but only if
+ * the submitted address appears in the per-tenant ALLOWED_EMAILS allowlist.
+ * Always redirects to the same neutral "check your email" state regardless
+ * of allowlist outcome so an attacker can't enumerate authorized addresses.
+ * `next` carries through from the middleware redirect so the user lands on
+ * the originally-requested page after they verify.
+ *
+ * Wraps Supabase's `signInWithOtp`, which still generates a magic-link URL
+ * server-side — we just don't surface it in the email body. The `/sign-in`
+ * UI completes auth via the typed-code path (`verifyOtpAction`), and the
+ * `/auth/callback` route stays alive defensively for any in-flight emails
+ * that pre-date the template change or for a future re-enable.
  *
  * The form can either submit a fresh email or omit it (used by the Resend
  * button on the post-submit screen), in which case we fall back to the last
@@ -47,7 +55,7 @@ function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
  * regardless of allowlist match so the UI behaves identically and doesn't
  * leak which addresses are accepted.
  */
-export async function requestMagicLinkAction(formData: FormData) {
+export async function requestSignInCodeAction(formData: FormData) {
   const cookieStore = await cookies();
   const formEmail = String(formData.get("email") ?? "")
     .trim()
@@ -97,7 +105,7 @@ export async function requestMagicLinkAction(formData: FormData) {
  * no mail-app round-trip, and immune to URL prefetchers that consume
  * single-use magic-link tokens before the human can click.
  *
- * Email is read from the `signin_email` cookie set by requestMagicLinkAction.
+ * Email is read from the `signin_email` cookie set by requestSignInCodeAction.
  * If the cookie is missing, the code shape is wrong, or the email is no
  * longer on the allowlist, redirect back with the generic invalid state —
  * no differentiation (same UX, same non-enumeration posture). Supabase
@@ -117,7 +125,7 @@ export async function verifyOtpAction(formData: FormData) {
     redirect(buildSentUrl(next, { invalid: true }));
   }
 
-  // Re-check the allowlist at verify time. requestMagicLinkAction writes
+  // Re-check the allowlist at verify time. requestSignInCodeAction writes
   // the cookie regardless of allowlist match (the no-enumeration property),
   // so without this gate someone holding an unexpired OTP for an address
   // that was previously allowlisted but has since been removed could still

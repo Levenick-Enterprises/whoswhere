@@ -48,6 +48,14 @@ type AllowedEmailsResult =
 
 const PRODUCTION_TARGET = "production";
 
+// Vercel returns `value` for `plain` and `encrypted` types (encrypted-at-rest
+// is just a storage detail — the API decrypts on read). It hides the value
+// for `secret` (legacy v2) and `sensitive` (the newer dashboard toggle).
+// `system` would only appear for built-ins like VERCEL_ENV and is never the
+// shape we'd see for ALLOWED_EMAILS, but bucket it as unreadable so we never
+// pretend we have its value.
+const UNREADABLE_ENV_TYPES = new Set<VercelEnv["type"]>(["secret", "sensitive", "system"]);
+
 function normalizeEmail(raw: string): string {
   return raw.trim().normalize("NFKC").toLowerCase();
 }
@@ -118,7 +126,7 @@ async function getAllowedEmailsEnv(projectId: string, token: string): Promise<Al
     (e) => e.key === ALLOWED_EMAILS_KEY && e.target.includes(PRODUCTION_TARGET),
   );
   if (!env) return { kind: "unset" };
-  if (env.type !== "plain") return { kind: "sensitive", type: env.type };
+  if (UNREADABLE_ENV_TYPES.has(env.type)) return { kind: "sensitive", type: env.type };
   const emails = env.value.split(",").map(normalizeEmail).filter(Boolean);
   return { kind: "ok", env, emails };
 }

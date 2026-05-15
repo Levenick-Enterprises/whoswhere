@@ -15,7 +15,8 @@ on:
         options:
           - demo
           # Future tenants get added here AND get a matching
-          # VERCEL_PROJECT_ID_<NAME> repo secret + a `case` arm below.
+          # VERCEL_PROJECT_ID_<NAME> environment secret (under the `production`
+          # environment) + a `case` arm below.
 
 concurrency:
   # Serialize deploys per tenant — a second click while one is in flight
@@ -28,6 +29,12 @@ jobs:
   deploy:
     name: Deploy to ${{ github.event.inputs.tenant }}
     runs-on: ubuntu-latest
+    # Binds to the `production` GitHub environment. The environment's
+    # protection rules (required reviewer + branch restriction to `main`)
+    # are configured in repo Settings → Environments. Secrets used by this
+    # job (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID_*) are scoped to
+    # the environment so only this protected job can read them.
+    environment: production
 
     steps:
       - name: Checkout main
@@ -66,7 +73,7 @@ jobs:
               ;;
           esac
           if [ -z "$PROJECT_ID" ]; then
-            echo "Missing VERCEL_PROJECT_ID_${{ github.event.inputs.tenant }} repo secret" >&2
+            echo "Missing VERCEL_PROJECT_ID_${{ github.event.inputs.tenant }} environment secret (production env)" >&2
             exit 1
           fi
           echo "id=$PROJECT_ID" >> "$GITHUB_OUTPUT"

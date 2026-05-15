@@ -33,9 +33,24 @@ Prod tenants don't watch git. They only update when the **`Deploy to prod tenant
 
 1. Repo → Actions tab → "Deploy to prod tenant" → Run workflow.
 2. Pick the tenant from the dropdown (currently `demo`).
-3. The workflow checks out `main`, builds, and ships via the Vercel CLI to that tenant's project.
+3. **Approve the deployment** in the workflow run page — the job is bound to the `production` GitHub environment, which requires a reviewer click before secrets unlock.
+4. The workflow checks out `main`, builds, and ships via the Vercel CLI to that tenant's project.
 
-The gate is deliberate — accidental merges shouldn't ship half-baked migrations to real users.
+Two layers of gate-keeping:
+
+- **Manual trigger** — the workflow doesn't auto-fire on push.
+- **Environment protection** — even after triggering, the job pauses for an explicit "Approve" click. Vercel secrets are scoped to the `production` environment, so a compromised non-production workflow can't read them.
+
+### One-time `production` environment setup
+
+Configured in repo **Settings → Environments → `production`**:
+
+- **Required reviewers:** add yourself (self-review counts; the click is what enforces the gate).
+- **Deployment branches:** restrict to `main`.
+- **Environment secrets** (moved from repo-level secrets — only this protected job needs them):
+  - `VERCEL_TOKEN`
+  - `VERCEL_ORG_ID`
+  - `VERCEL_PROJECT_ID_DEMO` (and any future `VERCEL_PROJECT_ID_<TENANT>` as tenants come online).
 
 ### Adding a new tenant (recipe)
 
@@ -48,7 +63,7 @@ When a real prod tenant needs to come online — e.g. `knutson.whos-where.com` f
 3. **Bootstrap push**: `./scripts/db.sh push <tenant>`. The wrapper handles the link → push → relink-to-dev dance for the initial push too, so the CLI never gets stuck on the new prod tenant.
 4. **Vercel**: create a new project linked to this repo. Settings → Git → disable production deployments. Paste the new Supabase URL + secret key into Production env vars. Settings → Domains → add `<tenant>.whos-where.com`.
 5. **Cloudflare DNS**: add `<tenant>.whos-where.com` CNAME → `cname.vercel-dns.com`, DNS-only (grey cloud).
-6. **GitHub repo secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) with the new project's ID.
+6. **GitHub `production` environment secrets**: add `VERCEL_PROJECT_ID_<TENANT>` (uppercase) to the `production` environment (Settings → Environments → production → Add environment secret), not the repo-wide secrets list.
 
 ### Applying schema migrations across tenants
 

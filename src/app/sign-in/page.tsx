@@ -45,16 +45,16 @@ export default async function SignInPage({
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="text-sm text-zinc-500">
-          Email-based sign-in for the foreman of this tenant. Type the one-time code we send you, or
-          open the link in the email.
+          Email-based sign-in for the foreman of this tenant. We&apos;ll send a one-time code to
+          type here.
         </p>
       </header>
 
       {sent ? (
         <div className={cardClass} role="status" aria-live="polite">
           <p className="text-sm">
-            If that email is on the allowlist for this tenant, an email is on its way with both a
-            one-time code and a sign-in link. Enter the code below, or open the link on this device.
+            If that email is on the allowlist for this tenant, a one-time code is on its way. Enter
+            it below to sign in.
           </p>
           {lastEmail && (
             <p className="text-xs text-zinc-500">

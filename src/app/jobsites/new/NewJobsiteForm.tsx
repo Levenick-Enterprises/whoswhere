@@ -32,7 +32,7 @@ export function NewJobsiteForm() {
         />
       </FormField>
 
-      <FormField label="Address" hint="Free-form. Maps integration lands later (#5).">
+      <FormField label="Address" hint="Free-form. Tap the address on a jobsite to open it in Maps.">
         <input
           type="text"
           name="address"

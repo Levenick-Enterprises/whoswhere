@@ -25,7 +25,13 @@ const LOCAL_HOST_RE = /^(localhost(:\d+)?|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d
  */
 export async function publicOrigin(): Promise<string> {
   const pinned = process.env.APP_ORIGIN;
-  if (pinned) return pinned;
+  // Strip any trailing slashes — an operator typo like
+  // `APP_ORIGIN=https://demo.whos-where.com/` would otherwise silently break
+  // the Origin check on /sign-out (browser's Origin header never has a
+  // trailing slash → mismatch → 403) AND produce malformed
+  // `${origin}/auth/callback` URLs that won't match the Supabase Redirect
+  // URL allowlist.
+  if (pinned) return pinned.replace(/\/+$/, "");
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");

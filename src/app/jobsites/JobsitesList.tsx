@@ -28,7 +28,7 @@ import { reassignPerson } from "@/app/people/actions";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { usePageBusyAPI } from "@/lib/page-busy";
-import { useDragDelayMs } from "@/lib/usePrefs";
+import { CARD_SIZE_CLASSES, useCardSize, useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
 
@@ -60,6 +60,8 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   // MouseSensor (vs PointerSensor) keeps the desktop path snappy without ever
   // dispatching for touches, so the TouchSensor delay actually gates phones.
   const dragDelayMs = useDragDelayMs();
+  const [cardSize] = useCardSize();
+  const sizeClasses = CARD_SIZE_CLASSES[cardSize];
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: dragDelayMs, tolerance: 12 } }),
@@ -183,9 +185,15 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                 title="Unassigned"
                 subtitle="People not at any jobsite. Drop someone here to pull them off their site."
                 count={unassignedAll.length}
+                gapClass={sizeClasses.gap}
               >
                 {visibleUnassigned.map((person) => (
-                  <DraggablePill key={person.id} person={person} onOpen={openPerson} />
+                  <DraggablePill
+                    key={person.id}
+                    person={person}
+                    onOpen={openPerson}
+                    pillClass={sizeClasses.pill}
+                  />
                 ))}
               </DropZone>
             </li>
@@ -218,9 +226,15 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
                   }
                   count={sitePeople.length}
                   href={`/jobsites/${jobsite.id}`}
+                  gapClass={sizeClasses.gap}
                 >
                   {displayedPills.map((person) => (
-                    <DraggablePill key={person.id} person={person} onOpen={openPerson} />
+                    <DraggablePill
+                      key={person.id}
+                      person={person}
+                      onOpen={openPerson}
+                      pillClass={sizeClasses.pill}
+                    />
                   ))}
                 </DropZone>
               </li>
@@ -230,7 +244,9 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
       </div>
 
       <DragOverlay dropAnimation={null}>
-        {activePerson && <PillStatic name={activePerson.name} dragging />}
+        {activePerson && (
+          <PillStatic name={activePerson.name} pillClass={sizeClasses.pill} dragging />
+        )}
       </DragOverlay>
     </DndContext>
   );
@@ -242,6 +258,7 @@ function DropZone({
   subtitle,
   count,
   href,
+  gapClass,
   children,
 }: {
   id: string;
@@ -249,6 +266,7 @@ function DropZone({
   subtitle?: ReactNode;
   count: number;
   href?: string;
+  gapClass: string;
   children: ReactNode;
 }) {
   const { isOver, setNodeRef } = useDroppable({ id });
@@ -278,7 +296,7 @@ function DropZone({
         </span>
       </div>
       {subtitle && <div className="text-sm text-zinc-500">{subtitle}</div>}
-      <ul className="flex flex-wrap gap-1.5">
+      <ul className={`flex flex-wrap ${gapClass}`}>
         {children}
         {count === 0 && <li className="text-xs italic text-zinc-400">No one here.</li>}
       </ul>
@@ -286,7 +304,15 @@ function DropZone({
   );
 }
 
-function DraggablePill({ person, onOpen }: { person: Person; onOpen: (id: string) => void }) {
+function DraggablePill({
+  person,
+  onOpen,
+  pillClass,
+}: {
+  person: Person;
+  onOpen: (id: string) => void;
+  pillClass: string;
+}) {
   const { attributes, isDragging, listeners, setNodeRef } = useDraggable({
     id: person.id,
   });
@@ -300,7 +326,7 @@ function DraggablePill({ person, onOpen }: { person: Person; onOpen: (id: string
         onClick={() => onOpen(person.id)}
         {...attributes}
         {...listeners}
-        className={`cursor-grab touch-pan-y select-none rounded-full px-3 py-1 text-sm transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${
+        className={`cursor-grab touch-pan-y select-none rounded-full ${pillClass} transition-opacity active:cursor-grabbing [-webkit-touch-callout:none] [-webkit-user-select:none] ${
           isDragging
             ? "opacity-30"
             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -312,10 +338,18 @@ function DraggablePill({ person, onOpen }: { person: Person; onOpen: (id: string
   );
 }
 
-function PillStatic({ name, dragging = false }: { name: string; dragging?: boolean }) {
+function PillStatic({
+  name,
+  pillClass,
+  dragging = false,
+}: {
+  name: string;
+  pillClass: string;
+  dragging?: boolean;
+}) {
   return (
     <span
-      className={`inline-flex select-none rounded-full px-3 py-1 text-sm shadow-lg ${
+      className={`inline-flex select-none rounded-full ${pillClass} shadow-lg ${
         dragging
           ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
           : "bg-zinc-100 text-zinc-700"

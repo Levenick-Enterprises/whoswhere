@@ -4,3 +4,4 @@
 
 export const DRAG_STORAGE_KEY = "whoswhere:dragSpeed";
 export const THEME_STORAGE_KEY = "whoswhere:theme";
+export const CARD_SIZE_STORAGE_KEY = "whoswhere:cardSize";

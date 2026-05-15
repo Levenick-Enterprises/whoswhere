@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CardSizeSetting } from "@/components/CardSizeSetting";
 import { DragSpeedSetting } from "@/components/DragSpeedSetting";
 import { ThemeSetting } from "@/components/ThemeSetting";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -53,6 +54,11 @@ export default async function MorePage() {
       <section className={cardClass}>
         <h2 className="text-base font-semibold tracking-tight">Appearance</h2>
         <ThemeSetting />
+      </section>
+
+      <section className={cardClass}>
+        <h2 className="text-base font-semibold tracking-tight">Magnet size</h2>
+        <CardSizeSetting />
       </section>
 
       <div

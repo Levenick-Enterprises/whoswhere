@@ -257,13 +257,24 @@ async function cmdAddEmail(display: string, rawEmail: string): Promise<void> {
     return;
   }
 
-  const nextEmails = [...result.emails, email];
+  // Preserve the operator's existing entries verbatim (case + unicode form);
+  // only the new email gets normalized. parseAllowlist() normalizes on read
+  // so the auth gate isn't affected, but writing back the normalized list
+  // would silently rewrite stored entries the operator didn't ask to touch —
+  // showing up as an unsolicited diff in the Vercel dashboard. We dedupe
+  // against the normalized view (so `Mike@x` doesn't get re-added as `mike@x`)
+  // and only append the single new value.
+  const rawList = result.env.value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const nextValue = [...rawList, email].join(",");
   await vercelApi(`/v9/projects/${project.id}/env/${result.env.id}`, {
     method: "PATCH",
-    body: JSON.stringify({ value: nextEmails.join(",") }),
+    body: JSON.stringify({ value: nextValue }),
   });
 
-  console.log(`Added ${email} to ${display}'s allowlist (${nextEmails.length} total).`);
+  console.log(`Added ${email} to ${display}'s allowlist (${rawList.length + 1} total).`);
   console.log(
     "Vercel bakes env vars into the build, so a redeploy is needed before the new " +
       "value takes effect. For dev: hit Redeploy on the project's latest deployment " +

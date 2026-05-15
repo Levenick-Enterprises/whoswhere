@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { DRAG_STORAGE_KEY, THEME_STORAGE_KEY } from "@/lib/prefsKeys";
+import { CARD_SIZE_STORAGE_KEY, DRAG_STORAGE_KEY, THEME_STORAGE_KEY } from "@/lib/prefsKeys";
 
 export type DragSpeed = "snappy" | "balanced" | "deliberate";
 
@@ -18,8 +18,20 @@ export type Theme = "light" | "dark" | "system";
 
 export const THEMES: Theme[] = ["light", "dark", "system"];
 
+export type CardSize = "standard" | "roomy";
+
+export const CARD_SIZES: CardSize[] = ["standard", "roomy"];
+
+// Tailwind class fragments per size, mapped centrally so the static
+// DraggablePill and the DragOverlay-backed PillStatic can't drift.
+export const CARD_SIZE_CLASSES: Record<CardSize, { pill: string; gap: string }> = {
+  standard: { pill: "px-3 py-1 text-sm", gap: "gap-1.5" },
+  roomy: { pill: "px-4 py-2 text-base", gap: "gap-2" },
+};
+
 const DRAG_DEFAULT: DragSpeed = "balanced";
 const THEME_DEFAULT: Theme = "system";
+const CARD_SIZE_DEFAULT: CardSize = "standard";
 
 function isDragSpeed(value: unknown): value is DragSpeed {
   return value === "snappy" || value === "balanced" || value === "deliberate";
@@ -27,6 +39,10 @@ function isDragSpeed(value: unknown): value is DragSpeed {
 
 function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark" || value === "system";
+}
+
+function isCardSize(value: unknown): value is CardSize {
+  return value === "standard" || value === "roomy";
 }
 
 // Browsers don't fire the native `storage` event in the same tab that wrote
@@ -65,6 +81,11 @@ function readTheme(): Theme {
   return isTheme(stored) ? stored : THEME_DEFAULT;
 }
 
+function readCardSize(): CardSize {
+  const stored = safeGet(CARD_SIZE_STORAGE_KEY);
+  return isCardSize(stored) ? stored : CARD_SIZE_DEFAULT;
+}
+
 function writeAndBroadcast(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -91,4 +112,10 @@ export function useTheme(): [Theme, (next: Theme) => void] {
   const theme = useSyncExternalStore(subscribe, readTheme, () => THEME_DEFAULT);
   const set = useCallback((next: Theme) => writeAndBroadcast(THEME_STORAGE_KEY, next), []);
   return [theme, set];
+}
+
+export function useCardSize(): [CardSize, (next: CardSize) => void] {
+  const size = useSyncExternalStore(subscribe, readCardSize, () => CARD_SIZE_DEFAULT);
+  const set = useCallback((next: CardSize) => writeAndBroadcast(CARD_SIZE_STORAGE_KEY, next), []);
+  return [size, set];
 }

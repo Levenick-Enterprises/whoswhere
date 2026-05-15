@@ -107,7 +107,8 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
 **Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
-2. Supabase dashboard → Authentication → Email Templates → Magic Link: replace the default body (which is just the link) with a code-first template. **Omit `{{ .ConfirmationURL }}` entirely** to deny mail prefetchers a URL to consume — see "Why no magic link in the email body" above. Suggested subject + body (the code-first ordering also gets the code into the lock-screen preview AND maximizes iOS one-time-code autofill from `<input autocomplete="one-time-code">`):
+2. Supabase dashboard → Authentication → Sign In / Up: **toggle OFF "Confirm email"**. Default is ON, which sends a separate "Confirm signup" email on first auth for any new user (uses a different template than "Magic Link", customizing only Magic Link leaves the first send broken). `ALLOWED_EMAILS` is already the gate that vets who can sign in, so the confirm-signup step is redundant for whoswhere — turning it off means first-send and nth-send both use the Magic Link template, so there's only one template to customize.
+3. Supabase dashboard → Authentication → Email Templates → Magic Link: replace the default body (which is just the link) with a code-first template. **Omit `{{ .ConfirmationURL }}` entirely** to deny mail prefetchers a URL to consume — see "Why no magic link in the email body" above. Suggested subject + body (the code-first ordering also gets the code into the lock-screen preview AND maximizes iOS one-time-code autofill from `<input autocomplete="one-time-code">`):
 
    ```
    Subject: {{ .Token }} is your whoswhere sign-in code
@@ -117,8 +118,8 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
    This code expires in 1 hour.
    ```
 
-3. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
-4. Vercel project → Settings → Environment Variables, **Production scope only**:
+4. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
+5. Vercel project → Settings → Environment Variables, **Production scope only**:
    - `ALLOWED_EMAILS` — comma-separated addresses authorized for this tenant.
    - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
 

@@ -19,11 +19,11 @@ Multiple Vercel projects + Supabase projects, all from the same git repo. Code i
 
 ### Environments
 
-| URL                                        | Vercel project                                   | Supabase project           | Deploys when                                      |
-| ------------------------------------------ | ------------------------------------------------ | -------------------------- | ------------------------------------------------- |
-| `dev.whos-where.com`                       | `whoswhere` (existing)                           | Dev (200-person demo seed) | Every push to `main`                              |
-| `whoswhere-git-<branch>-<team>.vercel.app` | `whoswhere` (existing)                           | Dev                        | Every push to a branch (Vercel auto preview URL)  |
-| `demo.whos-where.com`                      | `whoswhere-demo` (NEW, git auto-deploy DISABLED) | Demo prod (clean)          | Only when `Deploy to prod tenant` GH Action fires |
+| URL                                            | Vercel project                                   | Supabase project           | Deploys when                                      |
+| ---------------------------------------------- | ------------------------------------------------ | -------------------------- | ------------------------------------------------- |
+| `dev.whos-where.com`                           | `whoswhere-dev`                                  | Dev (200-person demo seed) | Every push to `main`                              |
+| `whoswhere-dev-git-<branch>-<team>.vercel.app` | `whoswhere-dev`                                  | Dev                        | Every push to a branch (Vercel auto preview URL)  |
+| `demo.whos-where.com`                          | `whoswhere-demo` (NEW, git auto-deploy DISABLED) | Demo prod (clean)          | Only when `Deploy to prod tenant` GH Action fires |
 
 > **Preview URLs:** Vercel's auto-generated `*.vercel.app` URL is what you share for a PR preview today. Branch-named subdomains under `dev.whos-where.com` were initially planned but Vercel's wildcard domains don't auto-route by branch slug — tracked in issue #20 for a follow-up GH Action that aliases each preview deployment.
 
@@ -75,6 +75,22 @@ pnpm db:push                       # dev (wraps ./scripts/db.sh push dev)
 ```
 
 The tenant list lives in `scripts/db.sh`'s `PROD_TENANT_NAMES` / `PROD_TENANT_REFS` arrays and mirrors `.github/workflows/deploy-prod.yml`'s case arms — both must be updated when adding a new tenant (see "Adding a new tenant" → step 5).
+
+### Managing tenants (`pnpm tenant`)
+
+Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to list tenants and edit per-tenant env vars without dashboard clicks. Phase 1 covers list + add-email; `remove-email`, `delete-tenant`, and `create-tenant` are deferred.
+
+```sh
+pnpm tenant list                                   # table of tenants + URLs + allowlist counts
+pnpm tenant emails <tenant>                        # show ALLOWED_EMAILS for one tenant
+pnpm tenant add-email <tenant> <email@host>        # append an email (idempotent, NFKC-normalized)
+```
+
+Tenants are addressed by their display name: `dev` (project `whoswhere-dev`), `demo` (project `whoswhere-demo`), `<name>` (project `whoswhere-<name>`).
+
+**Token setup.** Generate at https://vercel.com/account/tokens, scope to the `michaellevenick-1933` team, paste into `.env.local` as `VERCEL_API_TOKEN`. Token lives only on your laptop and encodes no persistent state — regenerate any time (lost laptop / rotate). The `.env.local` file is gitignored.
+
+**Redeploy is required.** Vercel bakes env vars into the build, so adding/removing an email via the CLI (or the dashboard) doesn't take effect until the project is redeployed. For dev: hit Redeploy on the project's latest deployment in the Vercel dashboard. For prod tenants: trigger the `Deploy to prod tenant` GH workflow (which respects the production environment gate from PR #49). Auto-redeploy isn't built into the CLI yet — bypassing the gate for prod tenants would weaken it, and the dev redeploy is one click. Could be added in a future phase if friction grows.
 
 ### Auth + multi-tenant security
 

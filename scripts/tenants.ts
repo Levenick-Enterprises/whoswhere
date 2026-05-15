@@ -35,6 +35,19 @@ type VercelEnv = {
   target: string[];
 };
 
+// Vercel env entries are unique per (key, target), so ALLOWED_EMAILS can
+// exist independently on production / preview / development. The CLI only
+// manages the production allowlist (per CLAUDE.md "Per-tenant onboarding
+// for auth" — preview + dev are unconfigured by design); the result type
+// makes each non-OK state addressable so cmdList can render distinct
+// placeholders instead of collapsing everything to "(unset)".
+type AllowedEmailsResult =
+  | { kind: "ok"; env: VercelEnv; emails: string[] }
+  | { kind: "unset" }
+  | { kind: "sensitive"; type: string };
+
+const PRODUCTION_TARGET = "production";
+
 function normalizeEmail(raw: string): string {
   return raw.trim().normalize("NFKC").toLowerCase();
 }
@@ -99,22 +112,15 @@ async function listWhoswhereProjects(token: string): Promise<VercelProject[]> {
   return data.projects.filter((p) => p.name === "whoswhere" || p.name.startsWith("whoswhere-"));
 }
 
-async function getAllowedEmailsEnv(
-  projectId: string,
-  token: string,
-): Promise<{ env: VercelEnv; emails: string[] } | null> {
+async function getAllowedEmailsEnv(projectId: string, token: string): Promise<AllowedEmailsResult> {
   const data = await vercelApi<{ envs: VercelEnv[] }>(`/v10/projects/${projectId}/env`, {}, token);
-  const env = data.envs.find((e) => e.key === ALLOWED_EMAILS_KEY);
-  if (!env) return null;
-  if (env.type !== "plain") {
-    throw new Error(
-      `${ALLOWED_EMAILS_KEY} on this project is marked '${env.type}'. ` +
-        "It must be Plain (not Sensitive) so the tool can read the current value. " +
-        "Change it in the Vercel dashboard, then re-run.",
-    );
-  }
+  const env = data.envs.find(
+    (e) => e.key === ALLOWED_EMAILS_KEY && e.target.includes(PRODUCTION_TARGET),
+  );
+  if (!env) return { kind: "unset" };
+  if (env.type !== "plain") return { kind: "sensitive", type: env.type };
   const emails = env.value.split(",").map(normalizeEmail).filter(Boolean);
-  return { env, emails };
+  return { kind: "ok", env, emails };
 }
 
 async function resolveTenant(
@@ -145,16 +151,23 @@ async function cmdList(): Promise<void> {
   }
 
   type Row = { display: string; url: string; emailCount: string; project: string };
+  // Distinguish three failure modes that previously all rendered as
+  // "(unset)" — actually unset, marked Sensitive (can't read value), and
+  // genuine API/network failures. Operators reading the table can now tell
+  // a misconfig from a real "no production allowlist yet".
   const rows: Row[] = await Promise.all(
     projects.map(async (p) => {
       const display = projectToDisplay(p.name) ?? p.name;
-      const result = await getAllowedEmailsEnv(p.id, token).catch(() => null);
-      return {
-        display,
-        url: tenantUrl(display),
-        emailCount: result ? String(result.emails.length) : "(unset)",
-        project: p.name,
-      };
+      let emailCount: string;
+      try {
+        const result = await getAllowedEmailsEnv(p.id, token);
+        if (result.kind === "ok") emailCount = String(result.emails.length);
+        else if (result.kind === "unset") emailCount = "(unset)";
+        else emailCount = "(sensitive)";
+      } catch {
+        emailCount = "(error)";
+      }
+      return { display, url: tenantUrl(display), emailCount, project: p.name };
     }),
   );
   rows.sort((a, b) => a.display.localeCompare(b.display));
@@ -177,10 +190,18 @@ async function cmdEmails(display: string): Promise<void> {
   const token = requireToken();
   const { project } = await resolveTenant(display, token);
   const result = await getAllowedEmailsEnv(project.id, token);
-  if (!result) {
+  if (result.kind === "unset") {
     console.error(
-      `${ALLOWED_EMAILS_KEY} env var is not set on the ${project.name} project. ` +
+      `${ALLOWED_EMAILS_KEY} is not set on the Production target for ${project.name}. ` +
         "Add it in the Vercel dashboard before using this CLI.",
+    );
+    process.exit(1);
+  }
+  if (result.kind === "sensitive") {
+    console.error(
+      `${ALLOWED_EMAILS_KEY} on ${project.name} is marked '${result.type}'. ` +
+        "It must be Plain (not Sensitive) so the tool can read the current value. " +
+        "Change it in the Vercel dashboard, then re-run.",
     );
     process.exit(1);
   }
@@ -201,10 +222,18 @@ async function cmdAddEmail(display: string, rawEmail: string): Promise<void> {
   const token = requireToken();
   const { project } = await resolveTenant(display, token);
   const result = await getAllowedEmailsEnv(project.id, token);
-  if (!result) {
+  if (result.kind === "unset") {
     console.error(
-      `${ALLOWED_EMAILS_KEY} env var is not set on the ${project.name} project. ` +
+      `${ALLOWED_EMAILS_KEY} is not set on the Production target for ${project.name}. ` +
         "Add it in the Vercel dashboard before using this CLI.",
+    );
+    process.exit(1);
+  }
+  if (result.kind === "sensitive") {
+    console.error(
+      `${ALLOWED_EMAILS_KEY} on ${project.name} is marked '${result.type}'. ` +
+        "It must be Plain (not Sensitive) so the tool can read the current value. " +
+        "Change it in the Vercel dashboard, then re-run.",
     );
     process.exit(1);
   }

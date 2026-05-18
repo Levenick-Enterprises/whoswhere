@@ -41,6 +41,10 @@ type ActiveJobsite = { id: string; name: string };
 // `_jobsite*` underscored fields are preview-only and stripped before
 // the hidden form-field JSON is built — only the schema fields and
 // `current_jobsite_id` (when matched) cross the wire.
+//
+// `_jobsiteAmbiguous` distinguishes "this name matches multiple active
+// jobsites" from "no match at all" — both result in no auto-assignment,
+// but the operator's fix is different (rename a duplicate vs. fix a typo).
 type MappedRow = {
   name: string;
   position: string;
@@ -48,8 +52,18 @@ type MappedRow = {
   notes: string;
   current_jobsite_id?: string;
   _jobsiteRaw?: string;
-  _jobsiteMatched?: string; // canonical name on match; undefined otherwise
+  _jobsiteMatched?: string; // canonical name on unambiguous match; undefined otherwise
+  _jobsiteAmbiguous?: boolean;
 };
+
+// The schema doesn't enforce unique jobsite names, so two active jobsites
+// can normalize to the same key. Don't auto-assign in that case — last-
+// write-wins would land the person on an arbitrary "Smith Residence".
+// Track which normalized names are ambiguous so the preview can label
+// them clearly, and the operator can rename one of the collisions.
+type JobsiteHit =
+  | { kind: "single"; id: string; canonicalName: string }
+  | { kind: "ambiguous"; canonicalNames: string[] };
 
 export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJobsite[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -61,13 +75,23 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
   const [state, formAction] = useActionState(bulkCreatePeopleAction, ACTION_OK);
   const markBusy = useRegisterBusyOnce();
 
-  // Build name→{id, canonicalName} lookup once. Normalization matches the
-  // email-allowlist posture (NFKC + lowercase + trim) — forgiving without
-  // being magical (no fuzzy/Levenshtein; the per-row preview catches typos).
+  // Build name → JobsiteHit lookup once. Normalization matches the email-
+  // allowlist posture (NFKC + lowercase + trim) — forgiving without being
+  // magical (no fuzzy/Levenshtein; the per-row preview catches typos).
+  // If two active jobsites normalize to the same key, mark the entry
+  // ambiguous so we never silently auto-pick one of them.
   const jobsiteLookup = useMemo(() => {
-    const map = new Map<string, { id: string; canonicalName: string }>();
+    const map = new Map<string, JobsiteHit>();
     for (const j of activeJobsites) {
-      map.set(normalizeJobsiteName(j.name), { id: j.id, canonicalName: j.name });
+      const key = normalizeJobsiteName(j.name);
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, { kind: "single", id: j.id, canonicalName: j.name });
+      } else if (existing.kind === "single") {
+        map.set(key, { kind: "ambiguous", canonicalNames: [existing.canonicalName, j.name] });
+      } else {
+        existing.canonicalNames.push(j.name);
+      }
     }
     return map;
   }, [activeJobsites]);
@@ -159,10 +183,13 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
       if (jobsiteRaw) {
         mapped._jobsiteRaw = jobsiteRaw;
         const hit = jobsiteLookup.get(normalizeJobsiteName(jobsiteRaw));
-        if (hit) {
+        if (hit?.kind === "single") {
           mapped.current_jobsite_id = hit.id;
           mapped._jobsiteMatched = hit.canonicalName;
+        } else if (hit?.kind === "ambiguous") {
+          mapped._jobsiteAmbiguous = true;
         }
+        // No hit at all → leave unassigned; preview renders the "no match" state.
       }
       return mapped;
     });
@@ -192,13 +219,15 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
     !tooManyRows;
 
   const jobsiteColumnMapped = Object.values(mapping).some((f) => f === "jobsite");
+  const ambiguousRowCount = mappedRows.filter((r) => r._jobsiteAmbiguous).length;
 
   // Strip preview-only `_jobsite*` fields before serialization. Server only
   // accepts the canonical row shape.
   const payloadRows = useMemo(() => {
-    return mappedRows.map(({ _jobsiteRaw, _jobsiteMatched, ...rest }) => {
+    return mappedRows.map(({ _jobsiteRaw, _jobsiteMatched, _jobsiteAmbiguous, ...rest }) => {
       void _jobsiteRaw;
       void _jobsiteMatched;
+      void _jobsiteAmbiguous;
       return rest;
     });
   }, [mappedRows]);
@@ -316,6 +345,10 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
                             {row._jobsiteMatched}{" "}
                             <span className="text-green-600 dark:text-green-400">✓</span>
                           </span>
+                        ) : row._jobsiteAmbiguous ? (
+                          <em className="text-amber-700 dark:text-amber-400">
+                            {row._jobsiteRaw} — ambiguous (multiple jobsites match)
+                          </em>
                         ) : (
                           <em className="text-amber-700 dark:text-amber-400">
                             {row._jobsiteRaw ? `${row._jobsiteRaw} — unassigned` : "— unassigned"}
@@ -340,6 +373,14 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
             <p className="text-sm text-red-600 dark:text-red-400" role="alert">
               {mappedRows.length} rows exceeds the {MAX_ROWS}-row limit. Split your file and try
               again.
+            </p>
+          )}
+
+          {ambiguousRowCount > 0 && (
+            <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
+              {ambiguousRowCount} {ambiguousRowCount === 1 ? "row matches" : "rows match"} a jobsite
+              name that&apos;s shared by multiple active jobsites. Those people will land Unassigned
+              — rename one of the duplicate jobsites to make the match unambiguous.
             </p>
           )}
 

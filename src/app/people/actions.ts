@@ -227,18 +227,30 @@ export async function bulkCreatePeopleAction(
 
   const supabase = await createSupabaseServerClient();
 
-  // Build the active-jobsite-ID set once for ID validation. If the fetch
-  // fails, fail closed: reject any row that tried to assign a jobsite,
-  // since we can't verify the target is active.
-  const { data: activeJobsites, error: jobsitesError } = await supabase
-    .from("jobsites")
-    .select("id")
-    .is("archived_at", null);
-  if (jobsitesError) {
-    console.error("[bulkCreatePeople] jobsite fetch:", jobsitesError);
-    return { ok: false, message: "Couldn't verify jobsites. Please try again." };
+  // Only fetch active jobsite IDs if at least one row is actually trying
+  // to assign one — saves a query AND avoids failing closed on a lookup
+  // that's irrelevant to the import (all-unassigned imports shouldn't
+  // depend on whether the jobsites table is readable right now).
+  const anyAssignment = rawRows.some(
+    (r): r is { current_jobsite_id: string } =>
+      r !== null &&
+      typeof r === "object" &&
+      "current_jobsite_id" in r &&
+      typeof (r as { current_jobsite_id: unknown }).current_jobsite_id === "string",
+  );
+
+  let activeJobsiteIds: Set<string> | null = null;
+  if (anyAssignment) {
+    const { data: activeJobsites, error: jobsitesError } = await supabase
+      .from("jobsites")
+      .select("id")
+      .is("archived_at", null);
+    if (jobsitesError) {
+      console.error("[bulkCreatePeople] jobsite fetch:", jobsitesError);
+      return { ok: false, message: "Couldn't verify jobsites. Please try again." };
+    }
+    activeJobsiteIds = new Set(activeJobsites.map((j) => j.id));
   }
-  const activeJobsiteIds = new Set(activeJobsites.map((j) => j.id));
 
   type InsertRow = PersonInput & { current_jobsite_id?: string };
   const insertRows: InsertRow[] = [];
@@ -255,7 +267,9 @@ export async function bulkCreatePeopleAction(
     const candidateId =
       raw && typeof raw.current_jobsite_id === "string" ? raw.current_jobsite_id : undefined;
     if (candidateId) {
-      if (!activeJobsiteIds.has(candidateId)) {
+      // Non-null assertion is safe: anyAssignment was true (since we found
+      // a current_jobsite_id on at least this row), so the lookup ran.
+      if (!activeJobsiteIds!.has(candidateId)) {
         return {
           ok: false,
           message: `Row ${i + 1}: jobsite no longer exists or has been archived.`,

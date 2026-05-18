@@ -21,8 +21,10 @@ export type ColumnMapping<F extends string> = Record<string, F | "ignore">;
 
 /**
  * Lowercase + NFKC-normalized + trimmed synonym lists. Lookup is exact
- * after normalizing the incoming header the same way, so order matters
- * only for the type — Set-based lookup is the actual mechanism.
+ * after normalizing the incoming header the same way, so the order of
+ * entries within a field doesn't affect matching — `sniffMapping`
+ * builds a reverse `Map<normalizedSynonym, field>` and does a single
+ * O(1) get per header.
  */
 export const JOBSITE_HEADER_SYNONYMS: Record<JobsiteField, readonly string[]> = {
   name: [

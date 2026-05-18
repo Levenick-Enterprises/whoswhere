@@ -16,7 +16,7 @@ import {
   type PersonField,
 } from "@/lib/csv-import-mappings";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
-import { personInputSchema } from "@/lib/schemas/person";
+import { importPersonRowSchema } from "@/lib/schemas/person";
 
 import { bulkCreatePeopleAction } from "../actions";
 
@@ -188,7 +188,7 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
   const rowErrors = useMemo(() => {
     const errors: { row: number; message: string }[] = [];
     for (let i = 0; i < mappedRows.length; i++) {
-      const result = personInputSchema.safeParse(mappedRows[i]);
+      const result = importPersonRowSchema.safeParse(mappedRows[i]);
       if (!result.success) {
         const message = result.error.issues[0]?.message ?? "Invalid value";
         errors.push({ row: i + 1, message });

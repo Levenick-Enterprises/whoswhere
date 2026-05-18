@@ -9,7 +9,7 @@ import {
   normalizeJobsiteName,
   type JobsiteHit,
 } from "@/lib/csv-import-mappings";
-import { personInputSchema, type PersonInput } from "@/lib/schemas/person";
+import { importPersonRowSchema, personInputSchema, type PersonInput } from "@/lib/schemas/person";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
@@ -268,20 +268,23 @@ export async function bulkCreatePeopleAction(
   const insertRows: InsertRow[] = [];
 
   for (let i = 0; i < rawRows.length; i++) {
-    const raw = rawRows[i] as { jobsite_name?: unknown } | null;
-    const parsed = personInputSchema.safeParse(raw);
+    // Validate the WHOLE row, including the optional jobsite_name. Using
+    // importPersonRowSchema (not personInputSchema) means jobsite_name is
+    // trimmed + length-capped before we touch it for lookup — defends
+    // against a crafted payload pushing a multi-megabyte string through
+    // the normalize + Map.get path.
+    const parsed = importPersonRowSchema.safeParse(rawRows[i]);
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? "Invalid value";
       return { ok: false, message: `Row ${i + 1}: ${message}` };
     }
 
-    const row: InsertRow = parsed.data;
-    const candidateName =
-      raw && typeof raw.jobsite_name === "string" ? raw.jobsite_name.trim() : "";
-    if (candidateName) {
+    const { jobsite_name, ...personFields } = parsed.data;
+    const row: InsertRow = personFields;
+    if (jobsite_name) {
       // Non-null assertion is safe: anyAssignment was true (since we found
       // jobsite_name on at least this row), so the lookup was built.
-      const hit = jobsiteLookup!.get(normalizeJobsiteName(candidateName));
+      const hit = jobsiteLookup!.get(normalizeJobsiteName(jobsite_name));
       if (hit?.kind === "single") {
         row.current_jobsite_id = hit.id;
       }

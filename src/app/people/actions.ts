@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { type ActionResult } from "@/lib/action-result";
-import { personInputSchema } from "@/lib/schemas/person";
+import { personInputSchema, type PersonInput } from "@/lib/schemas/person";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
@@ -178,4 +178,101 @@ export async function reassignPersonAction(
   const raw = formData.get("jobsiteId");
   const jobsiteId = raw === "" || raw == null ? null : String(raw);
   return reassignPerson(personId, jobsiteId);
+}
+
+// Safety cap on bulk-import row count. Mirrors BULK_IMPORT_MAX_ROWS in
+// src/app/jobsites/actions.ts. If we ever extract to a shared constants
+// module, do it for both at once.
+const BULK_IMPORT_MAX_ROWS = 500;
+
+/**
+ * Inserts an array of people rows from the CSV-import UI. Client posts a
+ * JSON-stringified array via the hidden `rows` form field; each row is
+ * `{ name, position, phone, notes, current_jobsite_id? }` where the optional
+ * `current_jobsite_id` has already been resolved client-side from the
+ * mapped `Jobsite` column (name → ID lookup against active jobsites).
+ *
+ * Defense in depth on assignment: we re-fetch the set of active jobsite
+ * IDs server-side and reject any row whose `current_jobsite_id` doesn't
+ * appear in that set. This stops a crafted POST from landing a person on
+ * an archived or non-existent jobsite (RLS via FK would catch it too,
+ * but a clean per-row error beats a Postgres FK violation).
+ *
+ * All-or-nothing: any row failing schema OR ID validation rejects the
+ * whole import. Runs under `authed_insert_people` RLS (no policy change).
+ */
+export async function bulkCreatePeopleAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const raw = String(formData.get("rows") ?? "");
+  let rawRows: unknown;
+  try {
+    rawRows = JSON.parse(raw);
+  } catch {
+    return { ok: false, message: "Couldn't read the import data. Please try again." };
+  }
+  if (!Array.isArray(rawRows)) {
+    return { ok: false, message: "Couldn't read the import data. Please try again." };
+  }
+  if (rawRows.length === 0) {
+    return { ok: false, message: "No rows to import." };
+  }
+  if (rawRows.length > BULK_IMPORT_MAX_ROWS) {
+    return {
+      ok: false,
+      message: `Too many rows (${rawRows.length}). Limit is ${BULK_IMPORT_MAX_ROWS} per import — split the file and try again.`,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  // Build the active-jobsite-ID set once for ID validation. If the fetch
+  // fails, fail closed: reject any row that tried to assign a jobsite,
+  // since we can't verify the target is active.
+  const { data: activeJobsites, error: jobsitesError } = await supabase
+    .from("jobsites")
+    .select("id")
+    .is("archived_at", null);
+  if (jobsitesError) {
+    console.error("[bulkCreatePeople] jobsite fetch:", jobsitesError);
+    return { ok: false, message: "Couldn't verify jobsites. Please try again." };
+  }
+  const activeJobsiteIds = new Set(activeJobsites.map((j) => j.id));
+
+  type InsertRow = PersonInput & { current_jobsite_id?: string };
+  const insertRows: InsertRow[] = [];
+
+  for (let i = 0; i < rawRows.length; i++) {
+    const raw = rawRows[i] as { current_jobsite_id?: unknown } | null;
+    const parsed = personInputSchema.safeParse(raw);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message ?? "Invalid value";
+      return { ok: false, message: `Row ${i + 1}: ${message}` };
+    }
+
+    const row: InsertRow = parsed.data;
+    const candidateId =
+      raw && typeof raw.current_jobsite_id === "string" ? raw.current_jobsite_id : undefined;
+    if (candidateId) {
+      if (!activeJobsiteIds.has(candidateId)) {
+        return {
+          ok: false,
+          message: `Row ${i + 1}: jobsite no longer exists or has been archived.`,
+        };
+      }
+      row.current_jobsite_id = candidateId;
+    }
+    insertRows.push(row);
+  }
+
+  const { error } = await supabase.from("people").insert(insertRows).select("id");
+  if (error) {
+    console.error("[bulkCreatePeople] supabase:", error);
+    return { ok: false, message: "Couldn't import. Please try again." };
+  }
+
+  revalidatePath("/people");
+  revalidatePath("/jobsites");
+  redirect("/people");
 }

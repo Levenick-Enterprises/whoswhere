@@ -2,11 +2,16 @@
 // row against these synonym lists to pre-fill the operator's mapping; the
 // operator can override any choice in the UI.
 //
-// Generic enough for any entity — phase 1 uses it for jobsites, phase 2
-// will add a PERSON_HEADER_SYNONYMS export for the people import without
-// touching the sniff logic.
+// Generic enough for any entity. `sniffMapping` is fully type-parameterized,
+// so adding a new entity is just a new field type + synonym dict export.
 
 export type JobsiteField = "name" | "address" | "notes";
+
+// `jobsite` here is the *target jobsite name* — the import resolves names
+// to IDs against the current set of active jobsites, then writes the row's
+// `current_jobsite_id`. No-match values leave the imported person
+// unassigned (visible in the preview before commit).
+export type PersonField = "name" | "position" | "phone" | "notes" | "jobsite";
 
 /**
  * Result of sniffing: each CSV header maps to one of our schema fields,
@@ -32,6 +37,32 @@ export const JOBSITE_HEADER_SYNONYMS: Record<JobsiteField, readonly string[]> = 
   ],
   address: ["address", "addr", "street", "location", "site address", "project address"],
   notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
+};
+
+export const PERSON_HEADER_SYNONYMS: Record<PersonField, readonly string[]> = {
+  name: [
+    "name",
+    "full name",
+    "full_name",
+    "person",
+    "person name",
+    "employee",
+    "employee name",
+    "worker",
+  ],
+  position: ["position", "role", "title", "job", "job title", "occupation"],
+  phone: ["phone", "cell", "mobile", "phone number", "tel", "telephone"],
+  notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
+  jobsite: [
+    "jobsite",
+    "job site",
+    "site",
+    "project",
+    "assignment",
+    "location",
+    "current site",
+    "current jobsite",
+  ],
 };
 
 function normalizeHeader(raw: string): string {

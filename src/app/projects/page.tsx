@@ -2,23 +2,23 @@ import Link from "next/link";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { JobsitesList } from "./JobsitesList";
+import { ProjectsList } from "./ProjectsList";
 
 export const dynamic = "force-dynamic";
 
-export default async function JobsitesPage() {
+export default async function ProjectsPage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: jobsites, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+  const [{ data: projects, error: jErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
-      .from("jobsites")
+      .from("projects")
       .select("id, name, address")
       .is("archived_at", null)
       .order("name", { ascending: true }),
     supabase
       .from("people")
       .select(
-        "id, name, phone, current_jobsite_id, current_jobsite:current_jobsite_id (archived_at)",
+        "id, name, phone, current_project_id, current_project:current_project_id (archived_at)",
       )
       .is("archived_at", null)
       .order("name", { ascending: true }),
@@ -28,33 +28,33 @@ export default async function JobsitesPage() {
     throw new Error(`Supabase fetch failed: ${JSON.stringify(jErr ?? pErr)}`);
   }
 
-  // Normalize people whose current_jobsite points at an archived jobsite to
+  // Normalize people whose current_project points at an archived project to
   // "unassigned" — same rule the rest of the app applies.
   const normalizedPeople = (people ?? []).map((p) => ({
     id: p.id,
     name: p.name,
     phone: p.phone,
-    current_jobsite_id:
-      p.current_jobsite && !p.current_jobsite.archived_at ? p.current_jobsite_id : null,
+    current_project_id:
+      p.current_project && !p.current_project.archived_at ? p.current_project_id : null,
   }));
 
   return (
     <section className="flex flex-col gap-4">
       <header className="flex items-baseline justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Jobsites</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
         <div className="flex items-baseline gap-3">
           <span className="text-xs tabular-nums text-zinc-500">
-            {(jobsites ?? []).length} active
+            {(projects ?? []).length} active
           </span>
           <Link
-            href="/jobsites/new"
+            href="/projects/new"
             className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
           >
             + New
           </Link>
         </div>
       </header>
-      <JobsitesList jobsites={jobsites ?? []} people={normalizedPeople} />
+      <ProjectsList projects={projects ?? []} people={normalizedPeople} />
     </section>
   );
 }

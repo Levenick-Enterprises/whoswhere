@@ -6,16 +6,16 @@ import { useMemo, useState } from "react";
 import { PhoneIcon } from "@/components/icons";
 import { telHref } from "@/lib/links";
 
-type PersonWithJobsite = {
+type PersonWithProject = {
   id: string;
   name: string;
   position: string | null;
   phone: string | null;
   notes: string | null;
-  current_jobsite: { id: string; name: string } | null;
+  current_project: { id: string; name: string } | null;
 };
 
-export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
+export function PeopleList({ people }: { people: PersonWithProject[] }) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -25,7 +25,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
       if (p.name.toLowerCase().includes(q)) return true;
       if (p.position?.toLowerCase().includes(q)) return true;
       if (p.phone?.toLowerCase().includes(q)) return true;
-      if (p.current_jobsite?.name.toLowerCase().includes(q)) return true;
+      if (p.current_project?.name.toLowerCase().includes(q)) return true;
       return false;
     });
   }, [people, query]);
@@ -35,7 +35,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
       <input
         type="search"
         inputMode="search"
-        placeholder="Search names, positions, phones, or jobsites…"
+        placeholder="Search names, positions, phones, or projects…"
         aria-label="Search people"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -55,7 +55,7 @@ export function PeopleList({ people }: { people: PersonWithJobsite[] }) {
   );
 }
 
-function PersonRow({ person }: { person: PersonWithJobsite }) {
+function PersonRow({ person }: { person: PersonWithProject }) {
   const router = useRouter();
   const phoneHref = person.phone ? telHref(person.phone) : null;
 
@@ -91,9 +91,9 @@ function PersonRow({ person }: { person: PersonWithJobsite }) {
             <span className="tabular-nums">{person.phone}</span>
           </a>
         )}
-        {person.current_jobsite ? (
+        {person.current_project ? (
           <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            {person.current_jobsite.name}
+            {person.current_project.name}
           </span>
         ) : (
           <span className="shrink-0 rounded-full border border-dashed border-zinc-300 px-2 py-0.5 text-xs text-zinc-400 dark:border-zinc-700 dark:text-zinc-500">

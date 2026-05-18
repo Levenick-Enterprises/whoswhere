@@ -32,17 +32,17 @@ import { CARD_SIZE_CLASSES, useCardSize, useDragDelayMs } from "@/lib/usePrefs";
 
 const UNASSIGNED = "unassigned";
 
-type Jobsite = { id: string; name: string; address: string | null };
+type Project = { id: string; name: string; address: string | null };
 type Person = {
   id: string;
   name: string;
   phone: string | null;
-  current_jobsite_id: string | null;
+  current_project_id: string | null;
 };
 
-type OptimisticUpdate = { personId: string; jobsiteId: string | null };
+type OptimisticUpdate = { personId: string; projectId: string | null };
 
-export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people: Person[] }) {
+export function ProjectsList({ projects, people }: { projects: Project[]; people: Person[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
@@ -52,8 +52,8 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
 
   const [optimisticPeople, applyOptimisticUpdate] = useOptimistic(
     people,
-    (state, { personId, jobsiteId }: OptimisticUpdate) =>
-      state.map((p) => (p.id === personId ? { ...p, current_jobsite_id: jobsiteId } : p)),
+    (state, { personId, projectId }: OptimisticUpdate) =>
+      state.map((p) => (p.id === personId ? { ...p, current_project_id: projectId } : p)),
   );
 
   // Touch delay is user-configurable on /more (snappy / balanced / deliberate);
@@ -68,11 +68,11 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
     useSensor(KeyboardSensor),
   );
 
-  // Group all (optimistic) people by their current jobsite.
-  const peopleByJobsite = useMemo(() => {
+  // Group all (optimistic) people by their current project.
+  const peopleByProject = useMemo(() => {
     const map = new Map<string, Person[]>();
     for (const person of optimisticPeople) {
-      const key = person.current_jobsite_id ?? UNASSIGNED;
+      const key = person.current_project_id ?? UNASSIGNED;
       const bucket = map.get(key);
       if (bucket) bucket.push(person);
       else map.set(key, [person]);
@@ -85,17 +85,17 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   const matchesQuery = (text: string | null | undefined) =>
     !!text && text.toLowerCase().includes(trimmedQuery);
 
-  const visibleJobsites = useMemo(() => {
-    if (!trimmedQuery) return jobsites;
-    return jobsites.filter((jobsite) => {
-      if (matchesQuery(jobsite.name) || matchesQuery(jobsite.address)) return true;
-      const sitePeople = peopleByJobsite.get(jobsite.id) ?? [];
+  const visibleProjects = useMemo(() => {
+    if (!trimmedQuery) return projects;
+    return projects.filter((project) => {
+      if (matchesQuery(project.name) || matchesQuery(project.address)) return true;
+      const sitePeople = peopleByProject.get(project.id) ?? [];
       return sitePeople.some((p) => matchesQuery(p.name) || matchesQuery(p.phone));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobsites, peopleByJobsite, trimmedQuery]);
+  }, [projects, peopleByProject, trimmedQuery]);
 
-  const unassignedAll = peopleByJobsite.get(UNASSIGNED) ?? [];
+  const unassignedAll = peopleByProject.get(UNASSIGNED) ?? [];
   const visibleUnassigned = useMemo(() => {
     if (!trimmedQuery) return unassignedAll;
     return unassignedAll.filter((p) => matchesQuery(p.name) || matchesQuery(p.phone));
@@ -114,19 +114,19 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
 
     const personId = String(event.active.id);
     const overId = String(event.over.id);
-    const targetJobsiteId = overId === UNASSIGNED ? null : overId;
+    const targetProjectId = overId === UNASSIGNED ? null : overId;
 
     const person = optimisticPeople.find((p) => p.id === personId);
-    if (!person || person.current_jobsite_id === targetJobsiteId) return;
+    if (!person || person.current_project_id === targetProjectId) return;
 
     startTransition(async () => {
       // Register busy so a remote realtime event doesn't fire router.refresh()
       // mid-drag and reset the optimistic overlay to a snapshot that doesn't
       // yet contain this write.
       const release = pageBusy?.register();
-      applyOptimisticUpdate({ personId, jobsiteId: targetJobsiteId });
+      applyOptimisticUpdate({ personId, projectId: targetProjectId });
       try {
-        const result = await reassignPerson(personId, targetJobsiteId);
+        const result = await reassignPerson(personId, targetProjectId);
         setDragError(result.ok ? null : result.message);
       } finally {
         release?.();
@@ -142,11 +142,11 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
   }
 
   const showUnassignedSection = !trimmedQuery || visibleUnassigned.length > 0;
-  const nothingMatches = visibleJobsites.length === 0 && visibleUnassigned.length === 0;
+  const nothingMatches = visibleProjects.length === 0 && visibleUnassigned.length === 0;
 
   return (
     <DndContext
-      id="jobsites-board"
+      id="projects-board"
       sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
@@ -157,8 +157,8 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
         <input
           type="search"
           inputMode="search"
-          placeholder="Search jobsites, addresses, or crew names…"
-          aria-label="Search jobsites"
+          placeholder="Search projects, addresses, or crew names…"
+          aria-label="Search projects"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-base placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
@@ -170,9 +170,9 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
           </div>
         )}
 
-        {jobsites.length === 0 && unassignedAll.length === 0 && !trimmedQuery && (
+        {projects.length === 0 && unassignedAll.length === 0 && !trimmedQuery && (
           <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-            <p>No jobsites yet.</p>
+            <p>No projects yet.</p>
             <p className="mt-1 text-xs">Tap &ldquo;+ New&rdquo; above to create one.</p>
           </div>
         )}
@@ -183,7 +183,7 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
               <DropZone
                 id={UNASSIGNED}
                 title="Unassigned"
-                subtitle="People not at any jobsite. Drop someone here to pull them off their site."
+                subtitle="People not at any project. Drop someone here to pull them off their site."
                 count={unassignedAll.length}
                 gapClass={sizeClasses.gap}
               >
@@ -199,33 +199,33 @@ export function JobsitesList({ jobsites, people }: { jobsites: Jobsite[]; people
             </li>
           )}
 
-          {visibleJobsites.map((jobsite) => {
-            const sitePeople = peopleByJobsite.get(jobsite.id) ?? [];
+          {visibleProjects.map((project) => {
+            const sitePeople = peopleByProject.get(project.id) ?? [];
             const visibleSitePeople = trimmedQuery
               ? sitePeople.filter((p) => matchesQuery(p.name) || matchesQuery(p.phone))
               : sitePeople;
             const titleMatches =
-              !trimmedQuery || matchesQuery(jobsite.name) || matchesQuery(jobsite.address);
+              !trimmedQuery || matchesQuery(project.name) || matchesQuery(project.address);
             const displayedPills = trimmedQuery && titleMatches ? sitePeople : visibleSitePeople;
 
             return (
-              <li key={jobsite.id}>
+              <li key={project.id}>
                 <DropZone
-                  id={jobsite.id}
-                  title={jobsite.name}
+                  id={project.id}
+                  title={project.name}
                   subtitle={
-                    jobsite.address ? (
+                    project.address ? (
                       <MapsLinkButton
-                        address={jobsite.address}
-                        ariaLabel={`Open ${jobsite.address} in maps — choose Apple Maps or Google Maps`}
+                        address={project.address}
+                        ariaLabel={`Open ${project.address} in maps — choose Apple Maps or Google Maps`}
                         className="text-left underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
                       >
-                        {jobsite.address}
+                        {project.address}
                       </MapsLinkButton>
                     ) : undefined
                   }
                   count={sitePeople.length}
-                  href={`/jobsites/${jobsite.id}`}
+                  href={`/projects/${project.id}`}
                   gapClass={sizeClasses.gap}
                 >
                   {displayedPills.map((person) => (

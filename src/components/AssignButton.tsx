@@ -19,20 +19,20 @@ const variants: Record<Variant, string> = {
 
 /**
  * Mini-form button that calls a server action via useActionState.
- * Pass personId + jobsiteId (or null to unassign); they're emitted as
+ * Pass personId + projectId (or null to unassign); they're emitted as
  * hidden inputs so the action can read them from FormData.
  */
 export function AssignButton({
   action,
   personId,
-  jobsiteId,
+  projectId,
   label,
   pendingLabel,
   variant = "primary",
 }: {
   action: (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
   personId: string;
-  jobsiteId: string | null;
+  projectId: string | null;
   label: string;
   pendingLabel?: string;
   variant?: Variant;
@@ -41,7 +41,7 @@ export function AssignButton({
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="personId" value={personId} />
-      <input type="hidden" name="jobsiteId" value={jobsiteId ?? ""} />
+      <input type="hidden" name="projectId" value={projectId ?? ""} />
       <AssignSubmit label={label} pendingLabel={pendingLabel ?? `${label}…`} variant={variant} />
       <FormErrorBanner state={state} />
     </form>

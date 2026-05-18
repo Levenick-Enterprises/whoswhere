@@ -8,10 +8,10 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
 
-import { createJobsiteAction } from "../actions";
+import { createProjectAction } from "../actions";
 
-export function NewJobsiteForm() {
-  const [state, formAction] = useActionState(createJobsiteAction, ACTION_OK);
+export function NewProjectForm() {
+  const [state, formAction] = useActionState(createProjectAction, ACTION_OK);
   // Synchronous busy registration on first onChange so a realtime event
   // can't slip in between the keystroke and the gate (#31).
   const markBusy = useRegisterBusyOnce();
@@ -32,7 +32,7 @@ export function NewJobsiteForm() {
         />
       </FormField>
 
-      <FormField label="Address" hint="Free-form. Tap the address on a jobsite to open it in Maps.">
+      <FormField label="Address" hint="Free-form. Tap the address on a project to open it in Maps.">
         <input
           type="text"
           name="address"

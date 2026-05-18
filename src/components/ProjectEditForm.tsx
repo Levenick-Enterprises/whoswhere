@@ -12,7 +12,7 @@ import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
 
-type Jobsite = {
+type Project = {
   id: string;
   name: string;
   address: string | null;
@@ -21,12 +21,12 @@ type Jobsite = {
 
 type FormAction = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
 
-export function JobsiteEditForm({
-  jobsite,
+export function ProjectEditForm({
+  project,
   updateAction,
   deleteAction,
 }: {
-  jobsite: Jobsite;
+  project: Project;
   updateAction: FormAction;
   deleteAction: FormAction;
 }) {
@@ -36,19 +36,19 @@ export function JobsiteEditForm({
     <>
       {isEditing ? (
         <EditFields
-          jobsite={jobsite}
+          project={project}
           updateAction={updateAction}
           onCancel={() => setIsEditing(false)}
         />
       ) : (
-        <ViewFields jobsite={jobsite} onEdit={() => setIsEditing(true)} />
+        <ViewFields project={project} onEdit={() => setIsEditing(true)} />
       )}
 
       {isEditing && (
         <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
           <DeleteButton
             action={deleteAction}
-            confirmMessage={`Delete ${jobsite.name}? You can restore from Trash.`}
+            confirmMessage={`Delete ${project.name}? You can restore from Trash.`}
           />
         </div>
       )}
@@ -56,17 +56,17 @@ export function JobsiteEditForm({
   );
 }
 
-function ViewFields({ jobsite, onEdit }: { jobsite: Jobsite; onEdit: () => void }) {
-  const hasAny = jobsite.address || jobsite.notes;
+function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void }) {
+  const hasAny = project.address || project.notes;
 
   return (
     <div className="flex flex-col gap-4">
       {hasAny ? (
         <div className="flex flex-col gap-1">
-          {jobsite.address && (
+          {project.address && (
             <MapsLinkButton
-              address={jobsite.address}
-              ariaLabel={`Open ${jobsite.address} in maps — choose Apple Maps or Google Maps`}
+              address={project.address}
+              ariaLabel={`Open ${project.address} in maps — choose Apple Maps or Google Maps`}
               className="flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-base transition-colors hover:bg-zinc-100 active:bg-zinc-200 dark:hover:bg-zinc-900 dark:active:bg-zinc-800"
             >
               <MapPinIcon
@@ -75,13 +75,13 @@ function ViewFields({ jobsite, onEdit }: { jobsite: Jobsite; onEdit: () => void 
                 height={20}
               />
               <span className="min-w-0 break-words text-zinc-900 dark:text-zinc-100">
-                {jobsite.address}
+                {project.address}
               </span>
             </MapsLinkButton>
           )}
-          {jobsite.notes && (
+          {project.notes && (
             <DetailIconRow icon={FileTextIcon} label="Notes">
-              {jobsite.notes}
+              {project.notes}
             </DetailIconRow>
           )}
         </div>
@@ -97,11 +97,11 @@ function ViewFields({ jobsite, onEdit }: { jobsite: Jobsite; onEdit: () => void 
 }
 
 function EditFields({
-  jobsite,
+  project,
   updateAction,
   onCancel,
 }: {
-  jobsite: Jobsite;
+  project: Project;
   updateAction: FormAction;
   onCancel: () => void;
 }) {
@@ -120,7 +120,7 @@ function EditFields({
           name="name"
           required
           maxLength={200}
-          defaultValue={jobsite.name}
+          defaultValue={project.name}
           className={inputClass}
         />
       </FormField>
@@ -130,7 +130,7 @@ function EditFields({
           type="text"
           name="address"
           maxLength={500}
-          defaultValue={jobsite.address ?? ""}
+          defaultValue={project.address ?? ""}
           className={inputClass}
         />
       </FormField>
@@ -140,7 +140,7 @@ function EditFields({
           name="notes"
           rows={3}
           maxLength={2000}
-          defaultValue={jobsite.notes ?? ""}
+          defaultValue={project.notes ?? ""}
           className={inputClass}
         />
       </FormField>

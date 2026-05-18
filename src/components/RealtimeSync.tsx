@@ -10,7 +10,7 @@ const REFRESH_DEBOUNCE_MS = 300;
 
 /**
  * Top-level subscriber that keeps every connected browser session in sync
- * with database mutations. Subscribes to postgres_changes on `jobsites` and
+ * with database mutations. Subscribes to postgres_changes on `projects` and
  * `people`; any event debounces a `router.refresh()` so every active
  * `force-dynamic` server component re-fetches with fresh data.
  *
@@ -60,7 +60,7 @@ export function RealtimeSync() {
 
     const channel = supabase
       .channel("whoswhere-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobsites" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "projects" }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "people" }, scheduleRefresh)
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {

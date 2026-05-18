@@ -2,7 +2,7 @@
 
 ## Project
 
-`whoswhere` is a small web app for a construction foreman to track which crew members are at which jobsites. Mental model: a digital magnet board. List of jobsites, list of people, drag people between jobsites. Mobile-first.
+`whoswhere` is a small web app for a construction foreman to track which crew members are at which projects. Mental model: a digital magnet board. List of projects, list of people, drag people between projects. Mobile-first.
 
 Each tenant is single-user with an obscure URL (no auth gate yet). Lives in `Levenick-Enterprises/whoswhere`.
 

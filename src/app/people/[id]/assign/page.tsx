@@ -11,15 +11,15 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
   const { id: personId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: person, error: pErr }, { data: jobsites, error: jErr }] = await Promise.all([
+  const [{ data: person, error: pErr }, { data: projects, error: jErr }] = await Promise.all([
     supabase
       .from("people")
-      .select("id, name, current_jobsite_id, current_jobsite:current_jobsite_id (archived_at)")
+      .select("id, name, current_project_id, current_project:current_project_id (archived_at)")
       .eq("id", personId)
       .is("archived_at", null)
       .maybeSingle(),
     supabase
-      .from("jobsites")
+      .from("projects")
       .select("id, name, address")
       .is("archived_at", null)
       .order("name", { ascending: true }),
@@ -30,13 +30,13 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
   }
   if (!person) notFound();
 
-  // A current_jobsite_id pointing at an archived jobsite is treated the same
+  // A current_project_id pointing at an archived project is treated the same
   // as unassigned everywhere else in the app — match that here so the picker
   // doesn't show an "Unassign" affordance for a non-existent assignment.
-  const isAssignedToActiveJobsite =
-    person.current_jobsite_id !== null &&
-    person.current_jobsite !== null &&
-    !person.current_jobsite.archived_at;
+  const isAssignedToActiveProject =
+    person.current_project_id !== null &&
+    person.current_project !== null &&
+    !person.current_project.archived_at;
 
   const backTo = `/people/${person.id}`;
 
@@ -49,41 +49,41 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
         </Link>
       </header>
 
-      {isAssignedToActiveJobsite && (
+      {isAssignedToActiveProject && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-          <span className="text-sm text-zinc-500">Pull them off this jobsite entirely</span>
+          <span className="text-sm text-zinc-500">Pull them off this project entirely</span>
           <AssignButton
             action={reassignPersonAction}
             personId={person.id}
-            jobsiteId={null}
+            projectId={null}
             label="Unassign"
             variant="secondary"
           />
         </div>
       )}
 
-      {jobsites.length === 0 ? (
+      {projects.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 p-6 text-center text-sm text-zinc-500 dark:border-zinc-700">
-          No active jobsites to assign to. Create one first.
+          No active projects to assign to. Create one first.
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {jobsites.map((jobsite) => {
-            const isCurrent = isAssignedToActiveJobsite && person.current_jobsite_id === jobsite.id;
+          {projects.map((project) => {
+            const isCurrent = isAssignedToActiveProject && person.current_project_id === project.id;
             return (
               <li
-                key={jobsite.id}
+                key={project.id}
                 className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
               >
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium">{jobsite.name}</span>
-                  {jobsite.address && (
-                    <span className="truncate text-xs text-zinc-500">{jobsite.address}</span>
+                  <span className="truncate font-medium">{project.name}</span>
+                  {project.address && (
+                    <span className="truncate text-xs text-zinc-500">{project.address}</span>
                   )}
                 </div>
                 {isCurrent ? (
                   <Link
-                    href={`/jobsites/${jobsite.id}`}
+                    href={`/projects/${project.id}`}
                     className="rounded-md bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
                   >
                     Currently here →
@@ -92,7 +92,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
                   <AssignButton
                     action={reassignPersonAction}
                     personId={person.id}
-                    jobsiteId={jobsite.id}
+                    projectId={project.id}
                     label="Move here"
                   />
                 )}

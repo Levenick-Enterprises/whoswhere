@@ -8,35 +8,35 @@ import { FormField, inputClass } from "@/components/FormField";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import {
-  JOBSITE_HEADER_SYNONYMS,
+  PROJECT_HEADER_SYNONYMS,
   sniffMapping,
   type ColumnMapping,
-  type JobsiteField,
+  type ProjectField,
 } from "@/lib/csv-import-mappings";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
-import { jobsiteInputSchema } from "@/lib/schemas/jobsite";
+import { projectInputSchema } from "@/lib/schemas/project";
 
-import { bulkCreateJobsitesAction } from "../actions";
+import { bulkCreateProjectsAction } from "../actions";
 
-const FIELD_OPTIONS: ReadonlyArray<{ value: JobsiteField | "ignore"; label: string }> = [
+const FIELD_OPTIONS: ReadonlyArray<{ value: ProjectField | "ignore"; label: string }> = [
   { value: "ignore", label: "Skip this column" },
   { value: "name", label: "Name" },
   { value: "address", label: "Address" },
   { value: "notes", label: "Notes" },
 ];
 
-const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of jobsites should be way under this
+const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of projects should be way under this
 const MAX_ROWS = 500; // Mirrors BULK_IMPORT_MAX_ROWS in the server action
 const PREVIEW_ROWS = 5;
 
-export function ImportJobsitesForm() {
+export function ImportProjectsForm() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [hiddenColumnCount, setHiddenColumnCount] = useState(0);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
-  const [mapping, setMapping] = useState<ColumnMapping<JobsiteField>>({});
+  const [mapping, setMapping] = useState<ColumnMapping<ProjectField>>({});
   const [parseError, setParseError] = useState<string | null>(null);
-  const [state, formAction] = useActionState(bulkCreateJobsitesAction, ACTION_OK);
+  const [state, formAction] = useActionState(bulkCreateProjectsAction, ACTION_OK);
   const markBusy = useRegisterBusyOnce();
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -96,7 +96,7 @@ export function ImportJobsitesForm() {
         setHeaders(usefulHeaders);
         setHiddenColumnCount(hidden);
         setRows(result.data);
-        setMapping(sniffMapping(usefulHeaders, JOBSITE_HEADER_SYNONYMS));
+        setMapping(sniffMapping(usefulHeaders, PROJECT_HEADER_SYNONYMS));
       },
       error: (err: Error) => {
         resetParse();
@@ -113,11 +113,11 @@ export function ImportJobsitesForm() {
     setMapping({});
   }
 
-  function updateMapping(header: string, field: JobsiteField | "ignore") {
+  function updateMapping(header: string, field: ProjectField | "ignore") {
     setMapping((prev) => ({ ...prev, [header]: field }));
   }
 
-  // Map each CSV row to a jobsite-shaped object based on current mappings.
+  // Map each CSV row to a project-shaped object based on current mappings.
   // Multiple CSV columns mapping to the same target field: last one wins
   // (operator's responsibility to avoid; UI shows what's mapped where).
   const mappedRows = useMemo(() => {
@@ -142,7 +142,7 @@ export function ImportJobsitesForm() {
   const rowErrors = useMemo(() => {
     const errors: { row: number; message: string }[] = [];
     for (let i = 0; i < mappedRows.length; i++) {
-      const result = jobsiteInputSchema.safeParse(mappedRows[i]);
+      const result = projectInputSchema.safeParse(mappedRows[i]);
       if (!result.success) {
         const message = result.error.issues[0]?.message ?? "Invalid value";
         errors.push({ row: i + 1, message });
@@ -163,17 +163,17 @@ export function ImportJobsitesForm() {
   return (
     <div className="flex flex-col gap-5" onChange={markBusy}>
       <p className="text-sm text-zinc-500">
-        Upload a CSV of jobsites. We&apos;ll guess which columns match our fields from your headers
+        Upload a CSV of projects. We&apos;ll guess which columns match our fields from your headers
         — correct anything that&apos;s wrong. All rows must pass validation before the import
         commits.
       </p>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="jobsites-csv-file" className="text-sm font-medium">
+        <label htmlFor="projects-csv-file" className="text-sm font-medium">
           CSV file
         </label>
         <input
-          id="jobsites-csv-file"
+          id="projects-csv-file"
           type="file"
           accept=".csv,text/csv"
           onChange={onFileChange}
@@ -216,7 +216,7 @@ export function ImportJobsitesForm() {
                         aria-label={`Map CSV column "${header}" to a field`}
                         value={mapping[header] ?? "ignore"}
                         onChange={(e) =>
-                          updateMapping(header, e.target.value as JobsiteField | "ignore")
+                          updateMapping(header, e.target.value as ProjectField | "ignore")
                         }
                         className={`${inputClass} max-w-[170px]`}
                       >
@@ -272,7 +272,7 @@ export function ImportJobsitesForm() {
 
           {!hasNameMapping && (
             <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
-              Map one column to <span className="font-medium">Name</span> to continue — jobsites
+              Map one column to <span className="font-medium">Name</span> to continue — projects
               need a name.
             </p>
           )}

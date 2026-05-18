@@ -3,7 +3,7 @@ import { type ComponentType, type ReactNode, type SVGProps } from "react";
 type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 /**
- * Compact `[icon]  value` row for view-mode person/jobsite detail pages.
+ * Compact `[icon]  value` row for view-mode person/project detail pages.
  * Renders as a tappable anchor when `href` is provided (used for tel: and
  * maps: links); otherwise a plain div. Icon stroke uses currentColor so the
  * theme toggle on /more just works.

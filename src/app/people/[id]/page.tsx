@@ -15,7 +15,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
   const { data: person, error } = await supabase
     .from("people")
     .select(
-      "id, name, position, phone, notes, archived_at, current_jobsite:current_jobsite_id (id, name, archived_at)",
+      "id, name, position, phone, notes, archived_at, current_project:current_project_id (id, name, archived_at)",
     )
     .eq("id", id)
     .is("archived_at", null)
@@ -26,10 +26,10 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
   }
   if (!person) notFound();
 
-  // Hide the assignment when the referenced jobsite is itself in Trash.
-  const currentJobsite =
-    person.current_jobsite && !person.current_jobsite.archived_at
-      ? { id: person.current_jobsite.id, name: person.current_jobsite.name }
+  // Hide the assignment when the referenced project is itself in Trash.
+  const currentProject =
+    person.current_project && !person.current_project.archived_at
+      ? { id: person.current_project.id, name: person.current_project.name }
       : null;
 
   const updateWithId = updatePersonAction.bind(null, person.id);
@@ -49,11 +49,11 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-xs uppercase tracking-wide text-zinc-500">Current jobsite</span>
-          <span className="truncate font-medium">{currentJobsite?.name ?? "Unassigned"}</span>
+          <span className="text-xs uppercase tracking-wide text-zinc-500">Current project</span>
+          <span className="truncate font-medium">{currentProject?.name ?? "Unassigned"}</span>
         </div>
         <span className="shrink-0 rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          {currentJobsite ? "Change" : "Assign"} →
+          {currentProject ? "Change" : "Assign"} →
         </span>
       </Link>
 

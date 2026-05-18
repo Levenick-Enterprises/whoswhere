@@ -32,6 +32,7 @@ const PREVIEW_ROWS = 5;
 export function ImportJobsitesForm() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
+  const [hiddenColumnCount, setHiddenColumnCount] = useState(0);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<ColumnMapping<JobsiteField>>({});
   const [parseError, setParseError] = useState<string | null>(null);
@@ -67,10 +68,24 @@ export function ImportJobsitesForm() {
           setParseError("Couldn't find a header row in the CSV.");
           return;
         }
+        // Drop columns that are empty in every row. Numbers/Excel/Sheets
+        // frequently export trailing blank columns (e.g. Numbers' default
+        // 7-column sheet), which papaparse surfaces with auto-named headers
+        // like `_1`, `_2`. They clutter the mapping UI with nothing to map.
+        const usefulHeaders = parsedHeaders.filter((h) =>
+          result.data.some((row) => (row[h] ?? "").trim() !== ""),
+        );
+        const hidden = parsedHeaders.length - usefulHeaders.length;
+        if (usefulHeaders.length === 0) {
+          resetParse();
+          setParseError("The CSV has no columns with data.");
+          return;
+        }
         setFileName(file.name);
-        setHeaders(parsedHeaders);
+        setHeaders(usefulHeaders);
+        setHiddenColumnCount(hidden);
         setRows(result.data);
-        setMapping(sniffMapping(parsedHeaders, JOBSITE_HEADER_SYNONYMS));
+        setMapping(sniffMapping(usefulHeaders, JOBSITE_HEADER_SYNONYMS));
       },
       error: (err: Error) => {
         resetParse();
@@ -82,6 +97,7 @@ export function ImportJobsitesForm() {
   function resetParse() {
     setFileName(null);
     setHeaders([]);
+    setHiddenColumnCount(0);
     setRows([]);
     setMapping({});
   }
@@ -153,7 +169,10 @@ export function ImportJobsitesForm() {
           <p className="text-xs text-zinc-500">
             Loaded <span className="font-medium text-zinc-700 dark:text-zinc-300">{fileName}</span>{" "}
             — {rows.length} {rows.length === 1 ? "row" : "rows"}, {headers.length}{" "}
-            {headers.length === 1 ? "column" : "columns"}.
+            {headers.length === 1 ? "column" : "columns"}
+            {hiddenColumnCount > 0 &&
+              ` (${hiddenColumnCount} empty ${hiddenColumnCount === 1 ? "column" : "columns"} hidden)`}
+            .
           </p>
         )}
         {parseError && (

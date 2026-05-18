@@ -61,18 +61,27 @@ export default async function MorePage() {
         <CardSizeSetting />
       </section>
 
-      <div
-        aria-disabled="true"
-        className="flex cursor-not-allowed items-center justify-between gap-3 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/50 p-4 opacity-60 dark:border-zinc-800 dark:bg-zinc-950/50"
+      <Link
+        href="/jobsites/import"
+        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-medium">Import from spreadsheet</span>
+          <span className="font-medium">Import jobsites from CSV</span>
+          <span className="text-xs text-zinc-500">Bulk-add jobsites from a spreadsheet.</span>
+        </div>
+      </Link>
+
+      <Link
+        href="/people/import"
+        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-medium">Import people from CSV</span>
           <span className="text-xs text-zinc-500">
-            Bulk-add jobsites or people from CSV / XLSX (#6, #7).
+            Bulk-add people from a spreadsheet. Map a Jobsite column to auto-assign them.
           </span>
         </div>
-        <span className="shrink-0 text-xs italic text-zinc-400">coming soon</span>
-      </div>
+      </Link>
 
       <Link
         href="/trash"

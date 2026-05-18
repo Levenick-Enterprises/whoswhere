@@ -17,16 +17,20 @@ export function SubmitButton({
   label,
   pendingLabel,
   className,
+  disabled,
 }: {
   label: string;
   pendingLabel?: string;
   className?: string;
+  /** Caller-supplied disable (e.g. client-side validation failure). Combined
+   * with the implicit in-flight disable from useFormStatus. */
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className={
         className ??
         "rounded-lg bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"

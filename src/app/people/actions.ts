@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { type ActionResult } from "@/lib/action-result";
+import {
+  buildJobsiteLookup,
+  normalizeJobsiteName,
+  type JobsiteHit,
+} from "@/lib/csv-import-mappings";
 import { personInputSchema, type PersonInput } from "@/lib/schemas/person";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -227,36 +232,38 @@ export async function bulkCreatePeopleAction(
 
   const supabase = await createSupabaseServerClient();
 
-  // Only fetch active jobsite IDs if at least one row is actually trying
-  // to assign one — saves a query AND avoids failing closed on a lookup
-  // that's irrelevant to the import (all-unassigned imports shouldn't
-  // depend on whether the jobsites table is readable right now).
+  // Client posts the raw `jobsite_name` (typed CSV value) rather than a
+  // pre-resolved ID — that way the server is the canonical resolver and a
+  // jobsite rename mid-session can't desync a stale snapshot. Only fetch
+  // the active-jobsites table if at least one row is actually trying to
+  // assign one (saves a query, and an all-unassigned import shouldn't
+  // depend on whether jobsites is readable right now).
   const anyAssignment = rawRows.some(
-    (r): r is { current_jobsite_id: string } =>
+    (r): r is { jobsite_name: string } =>
       r !== null &&
       typeof r === "object" &&
-      "current_jobsite_id" in r &&
-      typeof (r as { current_jobsite_id: unknown }).current_jobsite_id === "string",
+      "jobsite_name" in r &&
+      typeof (r as { jobsite_name: unknown }).jobsite_name === "string",
   );
 
-  let activeJobsiteIds: Set<string> | null = null;
+  let jobsiteLookup: Map<string, JobsiteHit> | null = null;
   if (anyAssignment) {
     const { data: activeJobsites, error: jobsitesError } = await supabase
       .from("jobsites")
-      .select("id")
+      .select("id, name")
       .is("archived_at", null);
     if (jobsitesError) {
       console.error("[bulkCreatePeople] jobsite fetch:", jobsitesError);
       return { ok: false, message: "Couldn't verify jobsites. Please try again." };
     }
-    activeJobsiteIds = new Set(activeJobsites.map((j) => j.id));
+    jobsiteLookup = buildJobsiteLookup(activeJobsites);
   }
 
   type InsertRow = PersonInput & { current_jobsite_id?: string };
   const insertRows: InsertRow[] = [];
 
   for (let i = 0; i < rawRows.length; i++) {
-    const raw = rawRows[i] as { current_jobsite_id?: unknown } | null;
+    const raw = rawRows[i] as { jobsite_name?: unknown } | null;
     const parsed = personInputSchema.safeParse(raw);
     if (!parsed.success) {
       const message = parsed.error.issues[0]?.message ?? "Invalid value";
@@ -264,18 +271,18 @@ export async function bulkCreatePeopleAction(
     }
 
     const row: InsertRow = parsed.data;
-    const candidateId =
-      raw && typeof raw.current_jobsite_id === "string" ? raw.current_jobsite_id : undefined;
-    if (candidateId) {
+    const candidateName =
+      raw && typeof raw.jobsite_name === "string" ? raw.jobsite_name.trim() : "";
+    if (candidateName) {
       // Non-null assertion is safe: anyAssignment was true (since we found
-      // a current_jobsite_id on at least this row), so the lookup ran.
-      if (!activeJobsiteIds!.has(candidateId)) {
-        return {
-          ok: false,
-          message: `Row ${i + 1}: jobsite no longer exists or has been archived.`,
-        };
+      // jobsite_name on at least this row), so the lookup was built.
+      const hit = jobsiteLookup!.get(normalizeJobsiteName(candidateName));
+      if (hit?.kind === "single") {
+        row.current_jobsite_id = hit.id;
       }
-      row.current_jobsite_id = candidateId;
+      // Ambiguous OR no-match → leave unassigned. The client preview
+      // already warned the operator; no need to error here. Silent skip
+      // matches the documented "best effort" assignment semantics.
     }
     insertRows.push(row);
   }

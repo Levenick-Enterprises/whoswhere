@@ -70,6 +70,49 @@ function normalizeHeader(raw: string): string {
 }
 
 /**
+ * Used by the people-import flow to resolve a CSV "Jobsite" column value
+ * to an active jobsite. Same normalization as `normalizeHeader` so both
+ * sides of the comparison go through identical text mangling — forgiving
+ * (case, whitespace, NFKC variants) without being magical (no fuzzy /
+ * Levenshtein).
+ */
+export function normalizeJobsiteName(raw: string): string {
+  return raw.trim().normalize("NFKC").toLowerCase();
+}
+
+export type JobsiteHit =
+  | { kind: "single"; id: string; canonicalName: string }
+  | { kind: "ambiguous"; canonicalNames: string[] };
+
+/**
+ * Builds the normalized name → JobsiteHit lookup used by the people-import
+ * flow. Two active jobsites that normalize to the same key are flagged
+ * `ambiguous` so neither client nor server silently picks one of them
+ * (the schema doesn't enforce unique jobsite names — operator can have
+ * "Smith Residence" twice or "Smith Residence" + "smith residence" by
+ * accident). Used by both the client preview and the server action so
+ * a rename mid-session can't desync the client's snapshot from the
+ * server's authoritative resolution.
+ */
+export function buildJobsiteLookup(
+  jobsites: ReadonlyArray<{ id: string; name: string }>,
+): Map<string, JobsiteHit> {
+  const map = new Map<string, JobsiteHit>();
+  for (const j of jobsites) {
+    const key = normalizeJobsiteName(j.name);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { kind: "single", id: j.id, canonicalName: j.name });
+    } else if (existing.kind === "single") {
+      map.set(key, { kind: "ambiguous", canonicalNames: [existing.canonicalName, j.name] });
+    } else {
+      existing.canonicalNames.push(j.name);
+    }
+  }
+  return map;
+}
+
+/**
  * For each header in `headers`, look it up in `synonyms` and assign the
  * first matching field key — or `"ignore"` if nothing matches. Operators
  * can override any of these in the UI.

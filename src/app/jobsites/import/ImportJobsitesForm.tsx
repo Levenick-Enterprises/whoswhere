@@ -158,8 +158,11 @@ export function ImportJobsitesForm() {
       </p>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">CSV file</label>
+        <label htmlFor="jobsites-csv-file" className="text-sm font-medium">
+          CSV file
+        </label>
         <input
+          id="jobsites-csv-file"
           type="file"
           accept=".csv,text/csv"
           onChange={onFileChange}
@@ -199,6 +202,7 @@ export function ImportJobsitesForm() {
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="truncate text-sm font-medium">{header}</span>
                       <select
+                        aria-label={`Map CSV column "${header}" to a field`}
                         value={mapping[header] ?? "ignore"}
                         onChange={(e) =>
                           updateMapping(header, e.target.value as JobsiteField | "ignore")

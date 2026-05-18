@@ -8,6 +8,8 @@ import { FormField, inputClass } from "@/components/FormField";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import {
+  buildJobsiteLookup,
+  normalizeJobsiteName,
   PERSON_HEADER_SYNONYMS,
   sniffMapping,
   type ColumnMapping,
@@ -31,16 +33,14 @@ const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of people should be way under t
 const MAX_ROWS = 500; // Mirrors BULK_IMPORT_MAX_ROWS in the server action
 const PREVIEW_ROWS = 5;
 
-function normalizeJobsiteName(raw: string): string {
-  return raw.trim().normalize("NFKC").toLowerCase();
-}
-
 type ActiveJobsite = { id: string; name: string };
 
 // Row shape we render in the preview + serialize to the server. The
 // `_jobsite*` underscored fields are preview-only and stripped before
-// the hidden form-field JSON is built — only the schema fields and
-// `current_jobsite_id` (when matched) cross the wire.
+// the hidden form-field JSON is built. The wire payload carries the
+// raw `jobsite_name` (NOT a pre-resolved ID) — the server is the
+// canonical resolver, so a jobsite rename mid-session can't desync a
+// stale snapshot from the actual current mapping.
 //
 // `_jobsiteAmbiguous` distinguishes "this name matches multiple active
 // jobsites" from "no match at all" — both result in no auto-assignment,
@@ -50,20 +50,10 @@ type MappedRow = {
   position: string;
   phone: string;
   notes: string;
-  current_jobsite_id?: string;
-  _jobsiteRaw?: string;
+  jobsite_name?: string;
   _jobsiteMatched?: string; // canonical name on unambiguous match; undefined otherwise
   _jobsiteAmbiguous?: boolean;
 };
-
-// The schema doesn't enforce unique jobsite names, so two active jobsites
-// can normalize to the same key. Don't auto-assign in that case — last-
-// write-wins would land the person on an arbitrary "Smith Residence".
-// Track which normalized names are ambiguous so the preview can label
-// them clearly, and the operator can rename one of the collisions.
-type JobsiteHit =
-  | { kind: "single"; id: string; canonicalName: string }
-  | { kind: "ambiguous"; canonicalNames: string[] };
 
 export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJobsite[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
@@ -75,26 +65,10 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
   const [state, formAction] = useActionState(bulkCreatePeopleAction, ACTION_OK);
   const markBusy = useRegisterBusyOnce();
 
-  // Build name → JobsiteHit lookup once. Normalization matches the email-
-  // allowlist posture (NFKC + lowercase + trim) — forgiving without being
-  // magical (no fuzzy/Levenshtein; the per-row preview catches typos).
-  // If two active jobsites normalize to the same key, mark the entry
-  // ambiguous so we never silently auto-pick one of them.
-  const jobsiteLookup = useMemo(() => {
-    const map = new Map<string, JobsiteHit>();
-    for (const j of activeJobsites) {
-      const key = normalizeJobsiteName(j.name);
-      const existing = map.get(key);
-      if (!existing) {
-        map.set(key, { kind: "single", id: j.id, canonicalName: j.name });
-      } else if (existing.kind === "single") {
-        map.set(key, { kind: "ambiguous", canonicalNames: [existing.canonicalName, j.name] });
-      } else {
-        existing.canonicalNames.push(j.name);
-      }
-    }
-    return map;
-  }, [activeJobsites]);
+  // Build name → JobsiteHit lookup using the shared helper. Used purely
+  // for the preview here (server re-resolves authoritatively at submit
+  // time using the same module — see [[reference]] in CLAUDE.md).
+  const jobsiteLookup = useMemo(() => buildJobsiteLookup(activeJobsites), [activeJobsites]);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -181,15 +155,18 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
       };
       const jobsiteRaw = out.jobsite?.trim();
       if (jobsiteRaw) {
-        mapped._jobsiteRaw = jobsiteRaw;
+        // Always carry the raw name through to the payload — the server
+        // resolves authoritatively, even if the client preview shows
+        // "no match" against the page-load snapshot.
+        mapped.jobsite_name = jobsiteRaw;
         const hit = jobsiteLookup.get(normalizeJobsiteName(jobsiteRaw));
         if (hit?.kind === "single") {
-          mapped.current_jobsite_id = hit.id;
           mapped._jobsiteMatched = hit.canonicalName;
         } else if (hit?.kind === "ambiguous") {
           mapped._jobsiteAmbiguous = true;
         }
-        // No hit at all → leave unassigned; preview renders the "no match" state.
+        // No hit at all → leave preview metadata empty; preview renders the
+        // "no match" state.
       }
       return mapped;
     });
@@ -220,12 +197,26 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
 
   const jobsiteColumnMapped = Object.values(mapping).some((f) => f === "jobsite");
   const ambiguousRowCount = mappedRows.filter((r) => r._jobsiteAmbiguous).length;
+  // Rows that *tried* to assign (jobsite_name is set) but didn't resolve and
+  // aren't ambiguous → a plain "no match" case (typo, archived, etc.). The
+  // preview only shows the first PREVIEW_ROWS, so without this summary an
+  // operator could miss every no-match row past row 5.
+  const noMatchRows = useMemo(() => {
+    if (!jobsiteColumnMapped) return [] as { row: number; value: string }[];
+    const out: { row: number; value: string }[] = [];
+    for (let i = 0; i < mappedRows.length; i++) {
+      const r = mappedRows[i];
+      if (r.jobsite_name && !r._jobsiteMatched && !r._jobsiteAmbiguous) {
+        out.push({ row: i + 1, value: r.jobsite_name });
+      }
+    }
+    return out;
+  }, [mappedRows, jobsiteColumnMapped]);
 
-  // Strip preview-only `_jobsite*` fields before serialization. Server only
-  // accepts the canonical row shape.
+  // Strip preview-only `_jobsite*` fields before serialization. The server
+  // receives only schema fields + the raw `jobsite_name` (resolved server-side).
   const payloadRows = useMemo(() => {
-    return mappedRows.map(({ _jobsiteRaw, _jobsiteMatched, _jobsiteAmbiguous, ...rest }) => {
-      void _jobsiteRaw;
+    return mappedRows.map(({ _jobsiteMatched, _jobsiteAmbiguous, ...rest }) => {
       void _jobsiteMatched;
       void _jobsiteAmbiguous;
       return rest;
@@ -242,8 +233,11 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
       </p>
 
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium">CSV file</label>
+        <label htmlFor="people-csv-file" className="text-sm font-medium">
+          CSV file
+        </label>
         <input
+          id="people-csv-file"
           type="file"
           accept=".csv,text/csv"
           onChange={onFileChange}
@@ -283,6 +277,7 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="truncate text-sm font-medium">{header}</span>
                       <select
+                        aria-label={`Map CSV column "${header}" to a field`}
                         value={mapping[header] ?? "ignore"}
                         onChange={(e) =>
                           updateMapping(header, e.target.value as PersonField | "ignore")
@@ -347,11 +342,11 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
                           </span>
                         ) : row._jobsiteAmbiguous ? (
                           <em className="text-amber-700 dark:text-amber-400">
-                            {row._jobsiteRaw} — ambiguous (multiple jobsites match)
+                            {row.jobsite_name} — ambiguous (multiple jobsites match)
                           </em>
                         ) : (
                           <em className="text-amber-700 dark:text-amber-400">
-                            {row._jobsiteRaw ? `${row._jobsiteRaw} — unassigned` : "— unassigned"}
+                            {row.jobsite_name ? `${row.jobsite_name} — unassigned` : "— unassigned"}
                           </em>
                         )}
                       </td>
@@ -382,6 +377,28 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
               name that&apos;s shared by multiple active jobsites. Those people will land Unassigned
               — rename one of the duplicate jobsites to make the match unambiguous.
             </p>
+          )}
+
+          {noMatchRows.length > 0 && (
+            <details className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950">
+              <summary className="cursor-pointer text-sm font-medium text-amber-800 dark:text-amber-200">
+                {noMatchRows.length}{" "}
+                {noMatchRows.length === 1
+                  ? "row's jobsite value doesn't"
+                  : "rows' jobsite values don't"}{" "}
+                match an active jobsite — those people will land Unassigned
+              </summary>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-800 dark:text-amber-200">
+                {noMatchRows.slice(0, 20).map((m) => (
+                  <li key={m.row}>
+                    Row {m.row}: <span className="font-mono">{m.value}</span>
+                  </li>
+                ))}
+                {noMatchRows.length > 20 && (
+                  <li className="text-xs italic">…and {noMatchRows.length - 20} more.</li>
+                )}
+              </ul>
+            </details>
           )}
 
           {rowErrors.length > 0 && (

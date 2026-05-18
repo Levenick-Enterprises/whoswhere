@@ -2,11 +2,16 @@
 // row against these synonym lists to pre-fill the operator's mapping; the
 // operator can override any choice in the UI.
 //
-// Generic enough for any entity — phase 1 uses it for jobsites, phase 2
-// will add a PERSON_HEADER_SYNONYMS export for the people import without
-// touching the sniff logic.
+// Generic enough for any entity. `sniffMapping` is fully type-parameterized,
+// so adding a new entity is just a new field type + synonym dict export.
 
 export type JobsiteField = "name" | "address" | "notes";
+
+// `jobsite` here is the *target jobsite name* — the import resolves names
+// to IDs against the current set of active jobsites, then writes the row's
+// `current_jobsite_id`. No-match values leave the imported person
+// unassigned (visible in the preview before commit).
+export type PersonField = "name" | "position" | "phone" | "notes" | "jobsite";
 
 /**
  * Result of sniffing: each CSV header maps to one of our schema fields,
@@ -34,8 +39,77 @@ export const JOBSITE_HEADER_SYNONYMS: Record<JobsiteField, readonly string[]> = 
   notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
 };
 
+export const PERSON_HEADER_SYNONYMS: Record<PersonField, readonly string[]> = {
+  name: [
+    "name",
+    "full name",
+    "full_name",
+    "person",
+    "person name",
+    "employee",
+    "employee name",
+    "worker",
+  ],
+  position: ["position", "role", "title", "job", "job title", "occupation"],
+  phone: ["phone", "cell", "mobile", "phone number", "tel", "telephone"],
+  notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
+  jobsite: [
+    "jobsite",
+    "job site",
+    "site",
+    "project",
+    "assignment",
+    "location",
+    "current site",
+    "current jobsite",
+  ],
+};
+
 function normalizeHeader(raw: string): string {
   return raw.trim().normalize("NFKC").toLowerCase();
+}
+
+/**
+ * Used by the people-import flow to resolve a CSV "Jobsite" column value
+ * to an active jobsite. Same normalization as `normalizeHeader` so both
+ * sides of the comparison go through identical text mangling — forgiving
+ * (case, whitespace, NFKC variants) without being magical (no fuzzy /
+ * Levenshtein).
+ */
+export function normalizeJobsiteName(raw: string): string {
+  return raw.trim().normalize("NFKC").toLowerCase();
+}
+
+export type JobsiteHit =
+  | { kind: "single"; id: string; canonicalName: string }
+  | { kind: "ambiguous"; canonicalNames: string[] };
+
+/**
+ * Builds the normalized name → JobsiteHit lookup used by the people-import
+ * flow. Two active jobsites that normalize to the same key are flagged
+ * `ambiguous` so neither client nor server silently picks one of them
+ * (the schema doesn't enforce unique jobsite names — operator can have
+ * "Smith Residence" twice or "Smith Residence" + "smith residence" by
+ * accident). Used by both the client preview and the server action so
+ * a rename mid-session can't desync the client's snapshot from the
+ * server's authoritative resolution.
+ */
+export function buildJobsiteLookup(
+  jobsites: ReadonlyArray<{ id: string; name: string }>,
+): Map<string, JobsiteHit> {
+  const map = new Map<string, JobsiteHit>();
+  for (const j of jobsites) {
+    const key = normalizeJobsiteName(j.name);
+    const existing = map.get(key);
+    if (!existing) {
+      map.set(key, { kind: "single", id: j.id, canonicalName: j.name });
+    } else if (existing.kind === "single") {
+      map.set(key, { kind: "ambiguous", canonicalNames: [existing.canonicalName, j.name] });
+    } else {
+      existing.canonicalNames.push(j.name);
+    }
+  }
+  return map;
 }
 
 /**

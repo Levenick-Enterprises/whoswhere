@@ -67,8 +67,18 @@ export default async function MorePage() {
       >
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-medium">Import jobsites from CSV</span>
+          <span className="text-xs text-zinc-500">Bulk-add jobsites from a spreadsheet.</span>
+        </div>
+      </Link>
+
+      <Link
+        href="/people/import"
+        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="font-medium">Import people from CSV</span>
           <span className="text-xs text-zinc-500">
-            Bulk-add jobsites from a spreadsheet. People import coming next (#7).
+            Bulk-add people from a spreadsheet. Map a Jobsite column to auto-assign them.
           </span>
         </div>
       </Link>

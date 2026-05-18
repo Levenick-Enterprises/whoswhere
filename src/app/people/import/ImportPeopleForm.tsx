@@ -8,36 +8,67 @@ import { FormField, inputClass } from "@/components/FormField";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import {
-  JOBSITE_HEADER_SYNONYMS,
+  buildJobsiteLookup,
+  normalizeJobsiteName,
+  PERSON_HEADER_SYNONYMS,
   sniffMapping,
   type ColumnMapping,
-  type JobsiteField,
+  type PersonField,
 } from "@/lib/csv-import-mappings";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
-import { jobsiteInputSchema } from "@/lib/schemas/jobsite";
+import { personInputSchema } from "@/lib/schemas/person";
 
-import { bulkCreateJobsitesAction } from "../actions";
+import { bulkCreatePeopleAction } from "../actions";
 
-const FIELD_OPTIONS: ReadonlyArray<{ value: JobsiteField | "ignore"; label: string }> = [
+const FIELD_OPTIONS: ReadonlyArray<{ value: PersonField | "ignore"; label: string }> = [
   { value: "ignore", label: "Skip this column" },
   { value: "name", label: "Name" },
-  { value: "address", label: "Address" },
+  { value: "position", label: "Position" },
+  { value: "phone", label: "Phone" },
   { value: "notes", label: "Notes" },
+  { value: "jobsite", label: "Jobsite" },
 ];
 
-const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of jobsites should be way under this
+const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of people should be way under this
 const MAX_ROWS = 500; // Mirrors BULK_IMPORT_MAX_ROWS in the server action
 const PREVIEW_ROWS = 5;
 
-export function ImportJobsitesForm() {
+type ActiveJobsite = { id: string; name: string };
+
+// Row shape we render in the preview + serialize to the server. The
+// `_jobsite*` underscored fields are preview-only and stripped before
+// the hidden form-field JSON is built. The wire payload carries the
+// raw `jobsite_name` (NOT a pre-resolved ID) — the server is the
+// canonical resolver, so a jobsite rename mid-session can't desync a
+// stale snapshot from the actual current mapping.
+//
+// `_jobsiteAmbiguous` distinguishes "this name matches multiple active
+// jobsites" from "no match at all" — both result in no auto-assignment,
+// but the operator's fix is different (rename a duplicate vs. fix a typo).
+type MappedRow = {
+  name: string;
+  position: string;
+  phone: string;
+  notes: string;
+  jobsite_name?: string;
+  _jobsiteMatched?: string; // canonical name on unambiguous match; undefined otherwise
+  _jobsiteAmbiguous?: boolean;
+};
+
+export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJobsite[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [hiddenColumnCount, setHiddenColumnCount] = useState(0);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
-  const [mapping, setMapping] = useState<ColumnMapping<JobsiteField>>({});
+  const [mapping, setMapping] = useState<ColumnMapping<PersonField>>({});
   const [parseError, setParseError] = useState<string | null>(null);
-  const [state, formAction] = useActionState(bulkCreateJobsitesAction, ACTION_OK);
+  const [state, formAction] = useActionState(bulkCreatePeopleAction, ACTION_OK);
   const markBusy = useRegisterBusyOnce();
+
+  // Build name → JobsiteHit lookup using the shared helper. Used purely
+  // for the preview here (server re-resolves authoritatively at submit
+  // time using the same module — see [[reference]] in CLAUDE.md).
+  const jobsiteLookup = useMemo(() => buildJobsiteLookup(activeJobsites), [activeJobsites]);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -79,10 +110,8 @@ export function ImportJobsitesForm() {
           );
           return;
         }
-        // Drop columns that are empty in every row. Numbers/Excel/Sheets
-        // frequently export trailing blank columns (e.g. Numbers' default
-        // 7-column sheet), which papaparse surfaces with auto-named headers
-        // like `_1`, `_2`. They clutter the mapping UI with nothing to map.
+        // Drop columns that are empty in every row. See ImportJobsitesForm
+        // for the Numbers/Excel/Sheets trailing-blanks rationale.
         const usefulHeaders = parsedHeaders.filter((h) =>
           result.data.some((row) => (row[h] ?? "").trim() !== ""),
         );
@@ -96,7 +125,7 @@ export function ImportJobsitesForm() {
         setHeaders(usefulHeaders);
         setHiddenColumnCount(hidden);
         setRows(result.data);
-        setMapping(sniffMapping(usefulHeaders, JOBSITE_HEADER_SYNONYMS));
+        setMapping(sniffMapping(usefulHeaders, PERSON_HEADER_SYNONYMS));
       },
       error: (err: Error) => {
         resetParse();
@@ -113,36 +142,53 @@ export function ImportJobsitesForm() {
     setMapping({});
   }
 
-  function updateMapping(header: string, field: JobsiteField | "ignore") {
+  function updateMapping(header: string, field: PersonField | "ignore") {
     setMapping((prev) => ({ ...prev, [header]: field }));
   }
 
-  // Map each CSV row to a jobsite-shaped object based on current mappings.
-  // Multiple CSV columns mapping to the same target field: last one wins
-  // (operator's responsibility to avoid; UI shows what's mapped where).
-  const mappedRows = useMemo(() => {
+  // Map each CSV row to a person-shaped object + jobsite resolution metadata.
+  // Resolution here is preview-only — we set `jobsite_name` (raw value)
+  // on the payload and `_jobsiteMatched` / `_jobsiteAmbiguous` for the
+  // preview UI. The server re-resolves at submit time via the same
+  // helper, so client/server can't disagree on the rules.
+  const mappedRows = useMemo<MappedRow[]>(() => {
     return rows.map((row) => {
       const out: Record<string, string> = {};
       for (const [header, field] of Object.entries(mapping)) {
         if (field === "ignore") continue;
         out[field] = row[header] ?? "";
       }
-      // Default missing optional fields to empty string so safeParse sees a
-      // string (nullableTrimmed transforms empty → null on its own).
-      return {
+      const mapped: MappedRow = {
         name: out.name ?? "",
-        address: out.address ?? "",
+        position: out.position ?? "",
+        phone: out.phone ?? "",
         notes: out.notes ?? "",
       };
+      const jobsiteRaw = out.jobsite?.trim();
+      if (jobsiteRaw) {
+        // Always carry the raw name through to the payload — the server
+        // resolves authoritatively, even if the client preview shows
+        // "no match" against the page-load snapshot.
+        mapped.jobsite_name = jobsiteRaw;
+        const hit = jobsiteLookup.get(normalizeJobsiteName(jobsiteRaw));
+        if (hit?.kind === "single") {
+          mapped._jobsiteMatched = hit.canonicalName;
+        } else if (hit?.kind === "ambiguous") {
+          mapped._jobsiteAmbiguous = true;
+        }
+        // No hit at all → leave preview metadata empty; preview renders the
+        // "no match" state.
+      }
+      return mapped;
     });
-  }, [rows, mapping]);
+  }, [rows, mapping, jobsiteLookup]);
 
   // Run safeParse client-side for instant feedback; the server re-runs the
   // same check on submit as defense in depth.
   const rowErrors = useMemo(() => {
     const errors: { row: number; message: string }[] = [];
     for (let i = 0; i < mappedRows.length; i++) {
-      const result = jobsiteInputSchema.safeParse(mappedRows[i]);
+      const result = personInputSchema.safeParse(mappedRows[i]);
       if (!result.success) {
         const message = result.error.issues[0]?.message ?? "Invalid value";
         errors.push({ row: i + 1, message });
@@ -160,20 +206,49 @@ export function ImportJobsitesForm() {
     rowErrors.length === 0 &&
     !tooManyRows;
 
+  const jobsiteColumnMapped = Object.values(mapping).some((f) => f === "jobsite");
+  const ambiguousRowCount = mappedRows.filter((r) => r._jobsiteAmbiguous).length;
+  // Rows that *tried* to assign (jobsite_name is set) but didn't resolve and
+  // aren't ambiguous → a plain "no match" case (typo, archived, etc.). The
+  // preview only shows the first PREVIEW_ROWS, so without this summary an
+  // operator could miss every no-match row past row 5.
+  const noMatchRows = useMemo(() => {
+    if (!jobsiteColumnMapped) return [] as { row: number; value: string }[];
+    const out: { row: number; value: string }[] = [];
+    for (let i = 0; i < mappedRows.length; i++) {
+      const r = mappedRows[i];
+      if (r.jobsite_name && !r._jobsiteMatched && !r._jobsiteAmbiguous) {
+        out.push({ row: i + 1, value: r.jobsite_name });
+      }
+    }
+    return out;
+  }, [mappedRows, jobsiteColumnMapped]);
+
+  // Strip preview-only `_jobsite*` fields before serialization. The server
+  // receives only schema fields + the raw `jobsite_name` (resolved server-side).
+  const payloadRows = useMemo(() => {
+    return mappedRows.map(({ _jobsiteMatched, _jobsiteAmbiguous, ...rest }) => {
+      void _jobsiteMatched;
+      void _jobsiteAmbiguous;
+      return rest;
+    });
+  }, [mappedRows]);
+
   return (
     <div className="flex flex-col gap-5" onChange={markBusy}>
       <p className="text-sm text-zinc-500">
-        Upload a CSV of jobsites. We&apos;ll guess which columns match our fields from your headers
-        — correct anything that&apos;s wrong. All rows must pass validation before the import
-        commits.
+        Upload a CSV of people. We&apos;ll guess which columns match our fields from your headers —
+        correct anything that&apos;s wrong. Map a <span className="font-medium">Jobsite</span>{" "}
+        column to auto-assign each person to a matching jobsite by name (case-insensitive, active
+        jobsites only). No-match values land in the Unassigned pile.
       </p>
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="jobsites-csv-file" className="text-sm font-medium">
+        <label htmlFor="people-csv-file" className="text-sm font-medium">
           CSV file
         </label>
         <input
-          id="jobsites-csv-file"
+          id="people-csv-file"
           type="file"
           accept=".csv,text/csv"
           onChange={onFileChange}
@@ -216,7 +291,7 @@ export function ImportJobsitesForm() {
                         aria-label={`Map CSV column "${header}" to a field`}
                         value={mapping[header] ?? "ignore"}
                         onChange={(e) =>
-                          updateMapping(header, e.target.value as JobsiteField | "ignore")
+                          updateMapping(header, e.target.value as PersonField | "ignore")
                         }
                         className={`${inputClass} max-w-[170px]`}
                       >
@@ -247,8 +322,10 @@ export function ImportJobsitesForm() {
                 <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
                   <tr>
                     <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Address</th>
+                    <th className="px-3 py-2 font-medium">Position</th>
+                    <th className="px-3 py-2 font-medium">Phone</th>
                     <th className="px-3 py-2 font-medium">Notes</th>
+                    <th className="px-3 py-2 font-medium">Jobsite</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,10 +335,31 @@ export function ImportJobsitesForm() {
                         {row.name || <em className="text-zinc-400">(empty)</em>}
                       </td>
                       <td className="px-3 py-2">
-                        {row.address || <em className="text-zinc-400">—</em>}
+                        {row.position || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.phone || <em className="text-zinc-400">—</em>}
                       </td>
                       <td className="px-3 py-2">
                         {row.notes || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {!jobsiteColumnMapped ? (
+                          <em className="text-zinc-400">—</em>
+                        ) : row._jobsiteMatched ? (
+                          <span>
+                            {row._jobsiteMatched}{" "}
+                            <span className="text-green-600 dark:text-green-400">✓</span>
+                          </span>
+                        ) : row._jobsiteAmbiguous ? (
+                          <em className="text-amber-700 dark:text-amber-400">
+                            {row.jobsite_name} — ambiguous (multiple jobsites match)
+                          </em>
+                        ) : (
+                          <em className="text-amber-700 dark:text-amber-400">
+                            {row.jobsite_name ? `${row.jobsite_name} — unassigned` : "— unassigned"}
+                          </em>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -272,8 +370,8 @@ export function ImportJobsitesForm() {
 
           {!hasNameMapping && (
             <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
-              Map one column to <span className="font-medium">Name</span> to continue — jobsites
-              need a name.
+              Map one column to <span className="font-medium">Name</span> to continue — people need
+              a name.
             </p>
           )}
 
@@ -282,6 +380,36 @@ export function ImportJobsitesForm() {
               {mappedRows.length} rows exceeds the {MAX_ROWS}-row limit. Split your file and try
               again.
             </p>
+          )}
+
+          {ambiguousRowCount > 0 && (
+            <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
+              {ambiguousRowCount} {ambiguousRowCount === 1 ? "row matches" : "rows match"} a jobsite
+              name that&apos;s shared by multiple active jobsites. Those people will land Unassigned
+              — rename one of the duplicate jobsites to make the match unambiguous.
+            </p>
+          )}
+
+          {noMatchRows.length > 0 && (
+            <details className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950">
+              <summary className="cursor-pointer text-sm font-medium text-amber-800 dark:text-amber-200">
+                {noMatchRows.length}{" "}
+                {noMatchRows.length === 1
+                  ? "row's jobsite value doesn't"
+                  : "rows' jobsite values don't"}{" "}
+                match an active jobsite — those people will land Unassigned
+              </summary>
+              <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-800 dark:text-amber-200">
+                {noMatchRows.slice(0, 20).map((m) => (
+                  <li key={m.row}>
+                    Row {m.row}: <span className="font-mono">{m.value}</span>
+                  </li>
+                ))}
+                {noMatchRows.length > 20 && (
+                  <li className="text-xs italic">…and {noMatchRows.length - 20} more.</li>
+                )}
+              </ul>
+            </details>
           )}
 
           {rowErrors.length > 0 && (
@@ -304,7 +432,7 @@ export function ImportJobsitesForm() {
 
           <form action={formAction} className="flex flex-col gap-3">
             <FormErrorBanner state={state} />
-            <input type="hidden" name="rows" value={JSON.stringify(mappedRows)} />
+            <input type="hidden" name="rows" value={JSON.stringify(payloadRows)} />
             <SubmitButton
               label={`Import ${mappedRows.length} ${mappedRows.length === 1 ? "row" : "rows"}`}
               pendingLabel="Importing…"

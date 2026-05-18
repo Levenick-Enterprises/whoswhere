@@ -99,6 +99,17 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
           setParseError("Couldn't find a header row in the CSV.");
           return;
         }
+        // Reject over-cap CSVs immediately — a sub-1MB file can still have
+        // thousands of short rows. Without this gate the form would map +
+        // validate + render the preview for every row before the submit
+        // gate fires, wasting work on data that can't be submitted.
+        if (result.data.length > MAX_ROWS) {
+          resetParse();
+          setParseError(
+            `${result.data.length} rows exceeds the ${MAX_ROWS}-row limit. Split your file and try again.`,
+          );
+          return;
+        }
         // Drop columns that are empty in every row. See ImportJobsitesForm
         // for the Numbers/Excel/Sheets trailing-blanks rationale.
         const usefulHeaders = parsedHeaders.filter((h) =>
@@ -136,10 +147,10 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
   }
 
   // Map each CSV row to a person-shaped object + jobsite resolution metadata.
-  // The jobsite resolution happens here: raw column value → normalized lookup
-  // against the active-jobsites map. Match → set current_jobsite_id and
-  // remember the canonical name for the preview. No match → leave the field
-  // undefined; row still imports, just unassigned.
+  // Resolution here is preview-only — we set `jobsite_name` (raw value)
+  // on the payload and `_jobsiteMatched` / `_jobsiteAmbiguous` for the
+  // preview UI. The server re-resolves at submit time via the same
+  // helper, so client/server can't disagree on the rules.
   const mappedRows = useMemo<MappedRow[]>(() => {
     return rows.map((row) => {
       const out: Record<string, string> = {};

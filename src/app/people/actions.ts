@@ -193,18 +193,23 @@ const BULK_IMPORT_MAX_ROWS = 500;
 /**
  * Inserts an array of people rows from the CSV-import UI. Client posts a
  * JSON-stringified array via the hidden `rows` form field; each row is
- * `{ name, position, phone, notes, current_jobsite_id? }` where the optional
- * `current_jobsite_id` has already been resolved client-side from the
- * mapped `Jobsite` column (name → ID lookup against active jobsites).
+ * `{ name, position, phone, notes, jobsite_name? }` where the optional
+ * `jobsite_name` is the raw value the operator typed/mapped from the CSV
+ * `Jobsite` column. The server is the canonical resolver — it builds a
+ * fresh name→ID lookup from active jobsites and matches at insert time —
+ * so a jobsite rename mid-session can't desync a stale snapshot. Same
+ * normalization (NFKC + lowercase + trim) on both client preview and
+ * server resolution via the shared csv-import-mappings helpers.
  *
- * Defense in depth on assignment: we re-fetch the set of active jobsite
- * IDs server-side and reject any row whose `current_jobsite_id` doesn't
- * appear in that set. This stops a crafted POST from landing a person on
- * an archived or non-existent jobsite (RLS via FK would catch it too,
- * but a clean per-row error beats a Postgres FK violation).
+ * Resolution outcomes (matching the client preview's semantics):
+ *   - single match  → row gets current_jobsite_id assigned
+ *   - ambiguous     → leave unassigned (don't pick one of N collisions)
+ *   - no match      → leave unassigned (typo, archived, blank, etc.)
  *
- * All-or-nothing: any row failing schema OR ID validation rejects the
- * whole import. Runs under `authed_insert_people` RLS (no policy change).
+ * Ambiguous + no-match are silent skips at this layer because the client
+ * preview already showed the operator each row's outcome. Schema-failing
+ * rows DO error and reject the whole import (all-or-nothing on bad shape).
+ * Runs under `authed_insert_people` RLS (no policy change).
  */
 export async function bulkCreatePeopleAction(
   _prev: ActionResult,
@@ -295,5 +300,14 @@ export async function bulkCreatePeopleAction(
 
   revalidatePath("/people");
   revalidatePath("/jobsites");
+  // Each jobsite that received imported crew also needs its detail page
+  // revalidated — that route renders crew from `people` directly. Mirror
+  // what reassignPerson does for single-row reassignments.
+  const touchedJobsiteIds = new Set(
+    insertRows.map((r) => r.current_jobsite_id).filter((id): id is string => Boolean(id)),
+  );
+  for (const id of touchedJobsiteIds) {
+    revalidatePath(`/jobsites/${id}`);
+  }
   redirect("/people");
 }

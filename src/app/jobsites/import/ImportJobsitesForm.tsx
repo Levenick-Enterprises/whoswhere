@@ -68,6 +68,17 @@ export function ImportJobsitesForm() {
           setParseError("Couldn't find a header row in the CSV.");
           return;
         }
+        // Reject over-cap CSVs immediately — a sub-1MB file can still have
+        // thousands of short rows. Without this gate the form would map +
+        // validate + render the preview for every row before the submit
+        // gate fires, wasting work on data that can't be submitted.
+        if (result.data.length > MAX_ROWS) {
+          resetParse();
+          setParseError(
+            `${result.data.length} rows exceeds the ${MAX_ROWS}-row limit. Split your file and try again.`,
+          );
+          return;
+        }
         // Drop columns that are empty in every row. Numbers/Excel/Sheets
         // frequently export trailing blank columns (e.g. Numbers' default
         // 7-column sheet), which papaparse surfaces with auto-named headers

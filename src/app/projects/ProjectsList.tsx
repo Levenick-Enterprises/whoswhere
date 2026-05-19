@@ -89,8 +89,8 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
     if (!trimmedQuery) return projects;
     return projects.filter((project) => {
       if (matchesQuery(project.name) || matchesQuery(project.address)) return true;
-      const sitePeople = peopleByProject.get(project.id) ?? [];
-      return sitePeople.some((p) => matchesQuery(p.name) || matchesQuery(p.phone));
+      const projectPeople = peopleByProject.get(project.id) ?? [];
+      return projectPeople.some((p) => matchesQuery(p.name) || matchesQuery(p.phone));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, peopleByProject, trimmedQuery]);
@@ -183,7 +183,7 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
               <DropZone
                 id={UNASSIGNED}
                 title="Unassigned"
-                subtitle="People not at any project. Drop someone here to pull them off their site."
+                subtitle="People not at any project. Drop someone here to pull them off their project."
                 count={unassignedAll.length}
                 gapClass={sizeClasses.gap}
               >
@@ -200,13 +200,14 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
           )}
 
           {visibleProjects.map((project) => {
-            const sitePeople = peopleByProject.get(project.id) ?? [];
-            const visibleSitePeople = trimmedQuery
-              ? sitePeople.filter((p) => matchesQuery(p.name) || matchesQuery(p.phone))
-              : sitePeople;
+            const projectPeople = peopleByProject.get(project.id) ?? [];
+            const visibleProjectPeople = trimmedQuery
+              ? projectPeople.filter((p) => matchesQuery(p.name) || matchesQuery(p.phone))
+              : projectPeople;
             const titleMatches =
               !trimmedQuery || matchesQuery(project.name) || matchesQuery(project.address);
-            const displayedPills = trimmedQuery && titleMatches ? sitePeople : visibleSitePeople;
+            const displayedPills =
+              trimmedQuery && titleMatches ? projectPeople : visibleProjectPeople;
 
             return (
               <li key={project.id}>
@@ -224,7 +225,7 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
                       </MapsLinkButton>
                     ) : undefined
                   }
-                  count={sitePeople.length}
+                  count={projectPeople.length}
                   href={`/projects/${project.id}`}
                   gapClass={sizeClasses.gap}
                 >

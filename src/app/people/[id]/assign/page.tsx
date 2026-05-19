@@ -11,7 +11,7 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
   const { id: personId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: person, error: pErr }, { data: projects, error: jErr }] = await Promise.all([
+  const [{ data: person, error: pErr }, { data: projects, error: projErr }] = await Promise.all([
     supabase
       .from("people")
       .select("id, name, current_project_id, current_project:current_project_id (archived_at)")
@@ -25,8 +25,8 @@ export default async function AssignPersonPage({ params }: { params: Promise<{ i
       .order("name", { ascending: true }),
   ]);
 
-  if (pErr || jErr) {
-    throw new Error(`fetch failed: ${JSON.stringify(pErr ?? jErr)}`);
+  if (pErr || projErr) {
+    throw new Error(`fetch failed: ${JSON.stringify(pErr ?? projErr)}`);
   }
   if (!person) notFound();
 

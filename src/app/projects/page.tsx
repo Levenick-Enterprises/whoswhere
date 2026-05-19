@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: projects, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+  const [{ data: projects, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, address")
@@ -24,8 +24,8 @@ export default async function ProjectsPage() {
       .order("name", { ascending: true }),
   ]);
 
-  if (jErr || pErr) {
-    throw new Error(`Supabase fetch failed: ${JSON.stringify(jErr ?? pErr)}`);
+  if (projErr || pErr) {
+    throw new Error(`Supabase fetch failed: ${JSON.stringify(projErr ?? pErr)}`);
   }
 
   // Normalize people whose current_project points at an archived project to

@@ -46,10 +46,17 @@ export async function publicOrigin(): Promise<string> {
  * a protocol-relative URL) falls back to `/projects`. Prevents open-redirect
  * attacks where `?next=https://evil` would bounce the user off-site after
  * sign-in.
+ *
+ * Also normalizes the legacy `/jobsites` prefix to `/projects` so in-flight
+ * sign-in callbacks or magic links generated before the rename don't deliver
+ * the operator to a 404. Cheap forward-compat; remove once a few weeks have
+ * passed and no stale `?next=/jobsites/...` URLs are realistically in play.
  */
 export function safeNext(raw: string | null | undefined, fallback = "/projects"): string {
   if (!raw) return fallback;
   if (!raw.startsWith("/")) return fallback;
   if (raw.startsWith("//")) return fallback;
+  if (raw === "/jobsites") return "/projects";
+  if (raw.startsWith("/jobsites/")) return "/projects/" + raw.slice("/jobsites/".length);
   return raw;
 }

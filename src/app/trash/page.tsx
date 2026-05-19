@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function TrashPage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: projects, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+  const [{ data: projects, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, address, archived_at")
@@ -21,8 +21,8 @@ export default async function TrashPage() {
       .order("archived_at", { ascending: false }),
   ]);
 
-  if (jErr || pErr) {
-    throw new Error(`fetch trash failed: ${JSON.stringify(jErr ?? pErr)}`);
+  if (projErr || pErr) {
+    throw new Error(`fetch trash failed: ${JSON.stringify(projErr ?? pErr)}`);
   }
 
   const isEmpty = (projects?.length ?? 0) === 0 && (people?.length ?? 0) === 0;

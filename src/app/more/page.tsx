@@ -14,7 +14,7 @@ export default async function MorePage() {
   const supabase = await createSupabaseServerClient();
 
   const [
-    { count: trashedProjects, error: jErr },
+    { count: trashedProjects, error: projErr },
     { count: trashedPeople, error: pErr },
     {
       data: { user },
@@ -31,9 +31,9 @@ export default async function MorePage() {
     supabase.auth.getUser(),
   ]);
 
-  if (jErr || pErr) {
+  if (projErr || pErr) {
     throw new Error(
-      `Supabase fetch failed — projects: ${JSON.stringify(jErr)} / people: ${JSON.stringify(pErr)}`,
+      `Supabase fetch failed — projects: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
     );
   }
 

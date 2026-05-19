@@ -11,7 +11,7 @@ export default async function AssignCrewPage({ params }: { params: Promise<{ id:
   const { id: projectId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: project, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+  const [{ data: project, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name")
@@ -27,9 +27,9 @@ export default async function AssignCrewPage({ params }: { params: Promise<{ id:
       .order("name", { ascending: true }),
   ]);
 
-  if (jErr || pErr) {
+  if (projErr || pErr) {
     throw new Error(
-      `fetch failed — project: ${JSON.stringify(jErr)} / people: ${JSON.stringify(pErr)}`,
+      `fetch failed — project: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
     );
   }
   if (!project) notFound();

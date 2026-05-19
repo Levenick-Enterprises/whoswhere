@@ -57,10 +57,15 @@ export const PROJECT_HEADER_SYNONYMS: Record<ProjectField, readonly string[]> = 
     "pn",
   ],
   address: ["address", "addr", "street", "location", "site address", "project address"],
-  project_executive: ["project executive", "executive", "pe", "exec"],
+  // Role-field synonyms intentionally avoid the most ambiguous abbreviations
+  // ("exec", "super", "emp" — too easy to collide with unrelated headers).
+  // "PE" maps to project_engineer (construction-industry convention; per
+  // Copilot review on PR #59); operators with a CSV where "PE" means
+  // something else can manually override in the mapping UI.
+  project_executive: ["project executive", "executive"],
   project_manager: ["project manager", "manager", "pm"],
-  project_engineer: ["project engineer", "engineer", "pen"],
-  superintendent: ["superintendent", "supt", "super"],
+  project_engineer: ["project engineer", "engineer", "pe"],
+  superintendent: ["superintendent", "supt"],
   project_coordinator: ["project coordinator", "coordinator", "pc"],
   notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
 };
@@ -82,7 +87,6 @@ export const PERSON_HEADER_SYNONYMS: Record<PersonField, readonly string[]> = {
     "employee no",
     "emp #",
     "emp no",
-    "emp",
     "empl no",
     "employee id",
   ],

@@ -7,7 +7,7 @@ import { DetailIconRow } from "@/components/DetailIconRow";
 import { EditModeControls } from "@/components/EditModeControls";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
-import { BriefcaseIcon, FileTextIcon, PhoneIcon } from "@/components/icons";
+import { BriefcaseIcon, FileTextIcon, HashIcon, PhoneIcon } from "@/components/icons";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { telHref } from "@/lib/links";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
@@ -67,7 +67,7 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) 
       {hasAny ? (
         <div className="flex flex-col gap-1">
           {person.employee_number && (
-            <DetailIconRow icon={BriefcaseIcon} label="Employee number">
+            <DetailIconRow icon={HashIcon} label="Employee number">
               <span className="font-mono">{person.employee_number}</span>
             </DetailIconRow>
           )}

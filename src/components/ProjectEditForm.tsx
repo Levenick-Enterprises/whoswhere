@@ -7,7 +7,7 @@ import { DetailIconRow } from "@/components/DetailIconRow";
 import { EditModeControls } from "@/components/EditModeControls";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
-import { BriefcaseIcon, FileTextIcon, MapPinIcon } from "@/components/icons";
+import { FileTextIcon, HashIcon, MapPinIcon } from "@/components/icons";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
@@ -82,7 +82,7 @@ function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void 
       {hasAny ? (
         <div className="flex flex-col gap-1">
           {project.project_number && (
-            <DetailIconRow icon={BriefcaseIcon} label="Project number">
+            <DetailIconRow icon={HashIcon} label="Project number">
               <span className="font-mono">{project.project_number}</span>
             </DetailIconRow>
           )}

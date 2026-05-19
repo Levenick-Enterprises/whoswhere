@@ -11,6 +11,12 @@ export const dynamic = "force-dynamic";
 const cardClass =
   "flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950";
 
+const linkCardClass =
+  "flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900";
+
+const sectionLabelClass =
+  "text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
 export default async function MorePage() {
   const supabase = await createSupabaseServerClient();
   const canEdit = (await getCurrentUserRole()) === "admin";
@@ -18,132 +24,98 @@ export default async function MorePage() {
   // Only admins can SELECT all of app_users (audit users only see their own
   // row via self_select_app_users RLS). Fetch the count conditionally so we
   // don't surface an RLS-denied count or a misleading "1" to audit users.
-  const [
-    { count: trashedProjects, error: projErr },
-    { count: trashedPeople, error: pErr },
-    {
-      data: { user },
-    },
-    appUsersCountResult,
-  ] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("*", { count: "exact", head: true })
-      .not("archived_at", "is", null),
-    supabase
-      .from("people")
-      .select("*", { count: "exact", head: true })
-      .not("archived_at", "is", null),
+  // Trash counts moved to /more/data — only displayed there now.
+  const [{ data: userData }, appUsersCountResult] = await Promise.all([
     supabase.auth.getUser(),
     canEdit
       ? supabase.from("app_users").select("*", { count: "exact", head: true })
       : Promise.resolve({ count: null, error: null }),
   ]);
+  const user = userData.user;
 
-  if (projErr || pErr) {
-    throw new Error(
-      `Supabase fetch failed — projects: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
-    );
-  }
   if (appUsersCountResult.error) {
     throw new Error(
       `Supabase app_users count failed: ${JSON.stringify(appUsersCountResult.error)}`,
     );
   }
 
-  const trashTotal = (trashedProjects ?? 0) + (trashedPeople ?? 0);
   const appUsersCount = appUsersCountResult.count ?? 0;
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">More</h1>
         <p className="text-sm text-zinc-500">Less-frequent actions and admin views.</p>
       </header>
 
-      <section className={cardClass}>
-        <h2 className="text-base font-semibold tracking-tight">Drag-and-drop speed</h2>
-        <DragSpeedSetting />
-      </section>
+      <div className="flex flex-col gap-3">
+        <h2 className={sectionLabelClass}>Display &amp; feel</h2>
 
-      <section className={cardClass}>
-        <h2 className="text-base font-semibold tracking-tight">Appearance</h2>
-        <ThemeSetting />
-      </section>
+        <section className={cardClass}>
+          <h3 className="text-base font-semibold tracking-tight">Drag-and-drop speed</h3>
+          <DragSpeedSetting />
+        </section>
 
-      <section className={cardClass}>
-        <h2 className="text-base font-semibold tracking-tight">Magnet size</h2>
-        <CardSizeSetting />
-      </section>
+        <section className={cardClass}>
+          <h3 className="text-base font-semibold tracking-tight">Appearance</h3>
+          <ThemeSetting />
+        </section>
+
+        <section className={cardClass}>
+          <h3 className="text-base font-semibold tracking-tight">Magnet size</h3>
+          <CardSizeSetting />
+        </section>
+      </div>
 
       {canEdit && (
         <>
-          <Link
-            href="/projects/import"
-            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">Import projects from CSV</span>
-              <span className="text-xs text-zinc-500">Bulk-add projects from a spreadsheet.</span>
-            </div>
-          </Link>
+          <div className="flex flex-col gap-3">
+            <h2 className={sectionLabelClass}>Access</h2>
 
-          <Link
-            href="/people/import"
-            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">Import people from CSV</span>
-              <span className="text-xs text-zinc-500">
-                Bulk-add people from a spreadsheet. Map a Project column to auto-assign them.
+            <Link href="/users" className={linkCardClass}>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-medium">Manage user access</span>
+                <span className="text-xs text-zinc-500">Add, change role, or remove access.</span>
+              </div>
+              <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
+                {appUsersCount}
               </span>
-            </div>
-          </Link>
+            </Link>
+          </div>
 
-          <Link
-            href="/users"
-            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">Manage users</span>
-              <span className="text-xs text-zinc-500">Add, change role, or remove access.</span>
-            </div>
-            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
-              {appUsersCount}
-            </span>
-          </Link>
+          <div className="flex flex-col gap-3">
+            <h2 className={sectionLabelClass}>Data</h2>
 
-          <Link
-            href="/trash"
-            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">Trash</span>
-              <span className="text-xs text-zinc-500">
-                Deleted projects and people; restore from here.
-              </span>
-            </div>
-            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
-              {trashTotal}
-            </span>
-          </Link>
+            <Link href="/more/data" className={linkCardClass}>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-medium">Data management</span>
+                <span className="text-xs text-zinc-500">
+                  Bulk import from a spreadsheet, restore deleted items.
+                </span>
+              </div>
+            </Link>
+          </div>
         </>
       )}
 
-      <form action="/sign-out" method="post" className={cardClass}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="font-medium">Signed in</span>
-            <span className="truncate text-xs text-zinc-500">{user?.email ?? "Unknown"}</span>
+      <div className="flex flex-col gap-3">
+        <h2 className={sectionLabelClass}>Account</h2>
+
+        <form action="/sign-out" method="post" className={cardClass}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Signed in</span>
+              <span className="truncate text-xs text-zinc-500">{user?.email ?? "Unknown"}</span>
+            </div>
+            <button
+              type="submit"
+              className="shrink-0 rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              Sign out
+            </button>
           </div>
-          <button
-            type="submit"
-            className="shrink-0 rounded-md bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Sign out
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
 
       <p className="pt-2 text-center text-xs tabular-nums text-zinc-400 dark:text-zinc-600">
         {buildLabel()}

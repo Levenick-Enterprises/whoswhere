@@ -67,6 +67,24 @@ export function NewPersonForm() {
         <textarea name="notes" rows={3} maxLength={2000} className={inputClass} />
       </FormField>
 
+      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <input
+          type="checkbox"
+          name="show_magnet"
+          defaultChecked
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Show on magnet board
+          </span>
+          <span className="text-xs text-zinc-500">
+            Uncheck to hide this person&apos;s pill from the Projects board. They still appear on
+            the People tab and in project crew lists.
+          </span>
+        </span>
+      </label>
+
       <SubmitButton label="Create" pendingLabel="Creating…" />
     </form>
   );

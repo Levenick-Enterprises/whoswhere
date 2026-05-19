@@ -21,6 +21,9 @@ function parseFormData(formData: FormData) {
     position: formData.get("position") ?? "",
     phone: formData.get("phone") ?? "",
     notes: formData.get("notes") ?? "",
+    // Unchecked checkboxes don't submit a value; checked submits "on".
+    // Coerce both cases to boolean so Zod's z.boolean() field is happy.
+    show_magnet: formData.get("show_magnet") === "on",
   });
 }
 

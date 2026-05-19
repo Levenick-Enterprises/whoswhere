@@ -23,6 +23,9 @@ export default async function ProjectsPage() {
         "id, name, phone, current_project_id, current_project:current_project_id (archived_at)",
       )
       .is("archived_at", null)
+      // Hide people whose magnet has been turned off — they still appear in
+      // /people and in project crew lists, just not on the draggable board.
+      .eq("show_magnet", true)
       .order("name", { ascending: true }),
   ]);
 

@@ -11,6 +11,10 @@ export const personInputSchema = z.object({
   position: nullableTrimmedMax(100),
   phone: nullableTrimmed,
   notes: nullableTrimmed,
+  // Whether this person renders as a draggable magnet on /projects.
+  // .default(true) keeps the CSV import path working without changes —
+  // rows that don't specify show_magnet inherit the matching DB DEFAULT.
+  show_magnet: z.boolean().default(true),
 });
 
 export type PersonInput = z.infer<typeof personInputSchema>;

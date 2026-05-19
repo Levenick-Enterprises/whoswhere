@@ -41,11 +41,14 @@ export async function updateAppUserRoleAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  const denied = await adminGuard();
-  if (denied) return denied;
-
+  // Combine the admin gate + self-protection into a single getCurrentUser
+  // call. The free-standing adminGuard() would do its own lookup, and we'd
+  // immediately re-query for the caller's email — wasted round-trip.
   const me = await getCurrentUser();
-  if (me?.email === email) {
+  if (me?.role !== "admin") {
+    return { ok: false, message: "Read-only account — this action requires admin access." };
+  }
+  if (me.email === email) {
     // Server-side mirror of the UI disable. Defense in depth — a devtools
     // re-enable + submit lands here, not the DB.
     return { ok: false, message: "You can't change your own role." };
@@ -72,11 +75,13 @@ export async function deleteAppUserAction(
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
-  const denied = await adminGuard();
-  if (denied) return denied;
-
+  // See updateAppUserRoleAction — single getCurrentUser call gates admin
+  // access AND backs the self-protection check.
   const me = await getCurrentUser();
-  if (me?.email === email) {
+  if (me?.role !== "admin") {
+    return { ok: false, message: "Read-only account — this action requires admin access." };
+  }
+  if (me.email === email) {
     return { ok: false, message: "You can't remove yourself." };
   }
 

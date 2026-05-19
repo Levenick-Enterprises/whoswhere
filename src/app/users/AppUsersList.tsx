@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useOptimistic, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
 import { FormErrorBanner } from "@/components/FormErrorBanner";
@@ -81,46 +81,44 @@ function RoleSelect({
   currentRole: UserRole;
   disabled: boolean;
 }) {
-  const [state, formAction] = useActionState(action, ACTION_OK);
-  const formRef = useRef<HTMLFormElement>(null);
+  // The previous form-action approach used `defaultValue` on an uncontrolled
+  // <select>, which React 19's <form action> resets on submit — causing a
+  // visible flip back to the old role for the ~700ms the action took. Mirror
+  // the optimistic-DnD pattern in ProjectsList: call the server action inside
+  // a startTransition, drive the select's value with useOptimistic, then
+  // router.refresh() to re-pull the new server state. On failure, the
+  // optimistic value snaps back to currentRole automatically.
+  const [optimisticRole, setOptimisticRole] = useOptimistic(currentRole);
+  const [state, setState] = useState<ActionResult>(ACTION_OK);
+  const [isPending, startPendingTransition] = useTransition();
+
+  const handleChange = (newRole: UserRole) => {
+    startPendingTransition(async () => {
+      setOptimisticRole(newRole);
+      const formData = new FormData();
+      formData.set("role", newRole);
+      const result = await action(state, formData);
+      setState(result);
+      // No router.refresh needed — the server action calls revalidatePath
+      // and Next.js automatically refreshes the route inside the transition.
+    });
+  };
 
   return (
-    <form action={formAction} ref={formRef} className="flex flex-col gap-1">
-      <RoleSelectInner
-        currentRole={currentRole}
-        disabled={disabled}
-        onChange={() => formRef.current?.requestSubmit()}
-      />
+    <div className="flex flex-col gap-1">
+      <select
+        name="role"
+        value={optimisticRole}
+        disabled={disabled || isPending}
+        onChange={(e) => handleChange(e.target.value as UserRole)}
+        aria-label={isPending ? "Saving…" : "Role"}
+        className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+      >
+        <option value="audit">Audit</option>
+        <option value="admin">Admin</option>
+      </select>
       <FormErrorBanner state={state} />
-    </form>
-  );
-}
-
-function RoleSelectInner({
-  currentRole,
-  disabled,
-  onChange,
-}: {
-  currentRole: UserRole;
-  disabled: boolean;
-  onChange: () => void;
-}) {
-  // useFormStatus reflects the parent form's pending state; show "Saving…"
-  // via aria-label and visually dim the select while in flight. Used here
-  // instead of a separate pending-banner so the row stays compact.
-  const { pending } = useFormStatus();
-  return (
-    <select
-      name="role"
-      defaultValue={currentRole}
-      disabled={disabled || pending}
-      onChange={onChange}
-      aria-label={pending ? "Saving…" : "Role"}
-      className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
-    >
-      <option value="audit">Audit</option>
-      <option value="admin">Admin</option>
-    </select>
+    </div>
   );
 }
 

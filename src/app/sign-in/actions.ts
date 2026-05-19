@@ -72,7 +72,10 @@ function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
 export async function requestSignInCodeAction(formData: FormData) {
   const cookieStore = await cookies();
   const formEmail = normalizeEmail(String(formData.get("email") ?? ""));
-  const rawEmail = formEmail || (cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "");
+  // Cookie was written from a normalized value below, but pre-#60 cookies
+  // (or any future hand-crafted ones) could be non-canonical. Re-normalize
+  // at the use site so the app_users lookup stays case + Unicode invariant.
+  const rawEmail = formEmail || normalizeEmail(cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "");
   const next = safeNext(String(formData.get("next") ?? ""));
 
   // Server-side cooldown. The UI countdown is client-only and bypassable;
@@ -125,7 +128,9 @@ export async function requestSignInCodeAction(formData: FormData) {
  */
 export async function verifyOtpAction(formData: FormData) {
   const cookieStore = await cookies();
-  const email = cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "";
+  // Re-normalize the cookie value — same lockstep concern as
+  // requestSignInCodeAction. Pre-#60 cookies could be in any case.
+  const email = normalizeEmail(cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "");
   const code = String(formData.get("code") ?? "").trim();
   const next = safeNext(String(formData.get("next") ?? ""));
 

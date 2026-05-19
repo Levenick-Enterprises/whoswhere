@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ActionResult } from "@/lib/action-result";
+import { normalizeEmail } from "@/lib/normalizeEmail";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type UserRole = "admin" | "audit";
@@ -21,10 +22,13 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user?.email) return null;
+  // Normalize to stay in lockstep with the app_users PK convention — Supabase
+  // typically stores emails lowercased, but routing through normalizeEmail()
+  // makes the lookup case + Unicode invariant regardless.
   const { data } = await supabase
     .from("app_users")
     .select("role")
-    .eq("email", user.email)
+    .eq("email", normalizeEmail(user.email))
     .maybeSingle();
   if (data?.role === "admin" || data?.role === "audit") return data.role;
   return null;

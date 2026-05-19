@@ -78,7 +78,7 @@ The tenant list lives in `scripts/db.sh`'s `PROD_TENANT_NAMES` / `PROD_TENANT_RE
 
 ### Managing tenants (`pnpm tenant`)
 
-Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to inspect per-tenant Vercel projects + env-var state. `list` and `emails` are still useful diagnostic windows; `add-email` is **deprecated** — see "Managing users (post-#XX)" below for the current path.
+Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to inspect per-tenant Vercel projects + env-var state. `list` and `emails` are still useful diagnostic windows; `add-email` is **deprecated** as of #60 — see "Managing users" below for the current path.
 
 ```sh
 pnpm tenant list                                   # table of tenants + URLs + allowlist counts (Vercel env state)

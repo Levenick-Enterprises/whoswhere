@@ -31,6 +31,13 @@ alter table public.app_users enable row level security;
 -- functions don't belong in `public`.
 create schema if not exists private;
 
+-- The `authenticated` role needs USAGE on the schema in addition to EXECUTE
+-- on the function — without USAGE, every RLS policy that calls is_admin()
+-- fails with "permission denied for schema private", which silently blocks
+-- admin writes too. CREATE stays revoked (only the schema owner can add
+-- new objects here).
+grant usage on schema private to authenticated;
+
 create or replace function private.is_admin()
 returns boolean
 language sql

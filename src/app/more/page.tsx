@@ -51,18 +51,18 @@ export default async function MorePage() {
       <div className="flex flex-col gap-3">
         <h2 className={sectionLabelClass}>Display &amp; feel</h2>
 
-        <section className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="flex flex-col gap-3 p-4">
+        <section className="flex flex-col gap-6 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-col gap-3">
             <h3 className="text-base font-semibold tracking-tight">Drag-and-drop speed</h3>
             <DragSpeedSetting />
           </div>
 
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3">
             <h3 className="text-base font-semibold tracking-tight">Appearance</h3>
             <ThemeSetting />
           </div>
 
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3">
             <h3 className="text-base font-semibold tracking-tight">Magnet size</h3>
             <CardSizeSetting />
           </div>

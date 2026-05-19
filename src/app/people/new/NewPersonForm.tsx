@@ -32,6 +32,17 @@ export function NewPersonForm() {
         />
       </FormField>
 
+      <FormField label="Employee number" hint="Your internal identifier (e.g. E-1734). Optional.">
+        <input
+          type="text"
+          name="employee_number"
+          inputMode="text"
+          maxLength={50}
+          placeholder="E-1734"
+          className={inputClass}
+        />
+      </FormField>
+
       <FormField label="Position">
         <input
           type="text"

@@ -6,11 +6,18 @@ import { redirect } from "next/navigation";
 import { type ActionResult } from "@/lib/action-result";
 import { projectInputSchema, type ProjectInput } from "@/lib/schemas/project";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { uniqueViolationMessage } from "@/lib/uniqueViolation";
 
 function parseFormData(formData: FormData) {
   return projectInputSchema.safeParse({
     name: formData.get("name") ?? "",
+    project_number: formData.get("project_number") ?? "",
     address: formData.get("address") ?? "",
+    project_executive: formData.get("project_executive") ?? "",
+    project_manager: formData.get("project_manager") ?? "",
+    project_engineer: formData.get("project_engineer") ?? "",
+    superintendent: formData.get("superintendent") ?? "",
+    project_coordinator: formData.get("project_coordinator") ?? "",
     notes: formData.get("notes") ?? "",
   });
 }
@@ -29,7 +36,8 @@ export async function createProjectAction(
 
   if (error) {
     console.error("[createProject] supabase:", error);
-    return { ok: false, message: "Couldn't create project. Please try again." };
+    const friendly = uniqueViolationMessage(error);
+    return { ok: false, message: friendly ?? "Couldn't create project. Please try again." };
   }
 
   revalidatePath("/projects");
@@ -51,7 +59,8 @@ export async function updateProjectAction(
 
   if (error) {
     console.error("[updateProject] supabase:", error);
-    return { ok: false, message: "Couldn't save. Please try again." };
+    const friendly = uniqueViolationMessage(error);
+    return { ok: false, message: friendly ?? "Couldn't save. Please try again." };
   }
 
   revalidatePath("/projects");
@@ -155,6 +164,16 @@ export async function bulkCreateProjectsAction(
 
   if (error) {
     console.error("[bulkCreateProjects] supabase:", error);
+    // Bulk-insert can't pin a 23505 to a specific row without a slow
+    // per-row pre-check. Surface a generic friendly message — operator
+    // dedupes the CSV and retries.
+    const friendly = uniqueViolationMessage(error);
+    if (friendly) {
+      return {
+        ok: false,
+        message: `${friendly} Check your CSV for duplicate values and try again.`,
+      };
+    }
     return { ok: false, message: "Couldn't import. Please try again." };
   }
 

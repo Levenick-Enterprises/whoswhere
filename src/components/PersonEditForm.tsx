@@ -15,6 +15,7 @@ import { useRegisterBusyOnce } from "@/lib/page-busy";
 type Person = {
   id: string;
   name: string;
+  employee_number: string | null;
   position: string | null;
   phone: string | null;
   notes: string | null;
@@ -58,13 +59,18 @@ export function PersonEditForm({
 }
 
 function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) {
-  const hasAny = person.position || person.phone || person.notes;
+  const hasAny = person.employee_number || person.position || person.phone || person.notes;
   const phoneHref = person.phone ? telHref(person.phone) : null;
 
   return (
     <div className="flex flex-col gap-4">
       {hasAny ? (
         <div className="flex flex-col gap-1">
+          {person.employee_number && (
+            <DetailIconRow icon={BriefcaseIcon} label="Employee number">
+              <span className="font-mono">{person.employee_number}</span>
+            </DetailIconRow>
+          )}
           {person.position && (
             <DetailIconRow icon={BriefcaseIcon} label="Position">
               {person.position}
@@ -92,7 +98,7 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) 
         </div>
       ) : (
         <p className="px-3 py-2 text-sm italic text-zinc-500">
-          No position, phone, or notes yet. Tap Edit to add.
+          No employee number, position, phone, or notes yet. Tap Edit to add.
         </p>
       )}
 
@@ -129,6 +135,18 @@ function EditFields({
           required
           maxLength={200}
           defaultValue={person.name}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Employee number">
+        <input
+          type="text"
+          name="employee_number"
+          inputMode="text"
+          maxLength={50}
+          defaultValue={person.employee_number ?? ""}
+          placeholder="E-1734"
           className={inputClass}
         />
       </FormField>

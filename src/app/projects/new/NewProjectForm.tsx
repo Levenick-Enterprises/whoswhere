@@ -32,6 +32,17 @@ export function NewProjectForm() {
         />
       </FormField>
 
+      <FormField label="Project number" hint="Your internal identifier (e.g. PRJ-0042). Optional.">
+        <input
+          type="text"
+          name="project_number"
+          inputMode="text"
+          maxLength={50}
+          placeholder="PRJ-0042"
+          className={inputClass}
+        />
+      </FormField>
+
       <FormField label="Address" hint="Free-form. Tap the address on a project to open it in Maps.">
         <input
           type="text"
@@ -40,6 +51,26 @@ export function NewProjectForm() {
           placeholder="1834 Maple St, Springfield"
           className={inputClass}
         />
+      </FormField>
+
+      <FormField label="Project executive">
+        <input type="text" name="project_executive" maxLength={100} className={inputClass} />
+      </FormField>
+
+      <FormField label="Project manager">
+        <input type="text" name="project_manager" maxLength={100} className={inputClass} />
+      </FormField>
+
+      <FormField label="Project engineer">
+        <input type="text" name="project_engineer" maxLength={100} className={inputClass} />
+      </FormField>
+
+      <FormField label="Superintendent">
+        <input type="text" name="superintendent" maxLength={100} className={inputClass} />
+      </FormField>
+
+      <FormField label="Project coordinator">
+        <input type="text" name="project_coordinator" maxLength={100} className={inputClass} />
       </FormField>
 
       <FormField label="Notes" hint="Access codes, gate hours, anything site-specific.">

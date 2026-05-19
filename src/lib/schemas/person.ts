@@ -7,6 +7,7 @@ export const personInputSchema = z.object({
     .string()
     .transform((s) => s.trim())
     .pipe(z.string().min(1, "Name is required").max(200, "Name is too long")),
+  employee_number: nullableTrimmedMax(50),
   position: nullableTrimmedMax(100),
   phone: nullableTrimmed,
   notes: nullableTrimmed,

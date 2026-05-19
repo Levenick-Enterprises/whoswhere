@@ -14,7 +14,9 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, name, address, notes, archived_at, people(id, name)")
+    .select(
+      "id, name, project_number, address, project_executive, project_manager, project_engineer, superintendent, project_coordinator, notes, archived_at, people(id, name)",
+    )
     .eq("id", id)
     .is("archived_at", null)
     .is("people.archived_at", null)
@@ -71,7 +73,13 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         project={{
           id: project.id,
           name: project.name,
+          project_number: project.project_number,
           address: project.address,
+          project_executive: project.project_executive,
+          project_manager: project.project_manager,
+          project_engineer: project.project_engineer,
+          superintendent: project.superintendent,
+          project_coordinator: project.project_coordinator,
           notes: project.notes,
         }}
         updateAction={updateWithId}

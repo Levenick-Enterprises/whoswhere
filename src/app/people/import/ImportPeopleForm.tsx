@@ -23,6 +23,7 @@ import { bulkCreatePeopleAction } from "../actions";
 const FIELD_OPTIONS: ReadonlyArray<{ value: PersonField | "ignore"; label: string }> = [
   { value: "ignore", label: "Skip this column" },
   { value: "name", label: "Name" },
+  { value: "employee_number", label: "Employee #" },
   { value: "position", label: "Position" },
   { value: "phone", label: "Phone" },
   { value: "notes", label: "Notes" },
@@ -47,6 +48,7 @@ type ActiveProject = { id: string; name: string };
 // but the operator's fix is different (rename a duplicate vs. fix a typo).
 type MappedRow = {
   name: string;
+  employee_number: string;
   position: string;
   phone: string;
   notes: string;
@@ -160,6 +162,7 @@ export function ImportPeopleForm({ activeProjects }: { activeProjects: ActivePro
       }
       const mapped: MappedRow = {
         name: out.name ?? "",
+        employee_number: out.employee_number ?? "",
         position: out.position ?? "",
         phone: out.phone ?? "",
         notes: out.notes ?? "",
@@ -322,6 +325,7 @@ export function ImportPeopleForm({ activeProjects }: { activeProjects: ActivePro
                 <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
                   <tr>
                     <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Employee #</th>
                     <th className="px-3 py-2 font-medium">Position</th>
                     <th className="px-3 py-2 font-medium">Phone</th>
                     <th className="px-3 py-2 font-medium">Notes</th>
@@ -333,6 +337,9 @@ export function ImportPeopleForm({ activeProjects }: { activeProjects: ActivePro
                     <tr key={i} className="border-t border-zinc-200 align-top dark:border-zinc-800">
                       <td className="px-3 py-2">
                         {row.name || <em className="text-zinc-400">(empty)</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.employee_number || <em className="text-zinc-400">—</em>}
                       </td>
                       <td className="px-3 py-2">
                         {row.position || <em className="text-zinc-400">—</em>}

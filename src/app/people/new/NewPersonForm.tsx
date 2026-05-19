@@ -67,10 +67,13 @@ export function NewPersonForm() {
         <textarea name="notes" rows={3} maxLength={2000} className={inputClass} />
       </FormField>
 
+      {/* Hidden "off" sentinel — see PersonEditForm + parseFormData. */}
       <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <input type="hidden" name="show_magnet" value="off" />
         <input
           type="checkbox"
           name="show_magnet"
+          value="on"
           defaultChecked
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
         />

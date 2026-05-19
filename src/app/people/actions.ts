@@ -15,15 +15,25 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { uniqueViolationMessage } from "@/lib/uniqueViolation";
 
 function parseFormData(formData: FormData) {
+  // Forms submit a hidden "off" sentinel alongside the checkbox's "on" value
+  // so we can distinguish three cases via getAll:
+  //   [] (field absent — stale/cached form) → undefined → Zod default (true)
+  //   ["off"] (intentional unchecked) → false
+  //   ["off", "on"] (intentional checked) → true
+  // Defaulting an absent field to false would silently hide existing people
+  // whenever an older browser tab POSTed a stale form. Defaulting to TRUE
+  // makes the worst-case visible (a hidden person re-appears on the board)
+  // instead of silent (a visible person disappears).
+  const showMagnetValues = formData.getAll("show_magnet");
+  const show_magnet = showMagnetValues.length === 0 ? undefined : showMagnetValues.includes("on");
+
   return personInputSchema.safeParse({
     name: formData.get("name") ?? "",
     employee_number: formData.get("employee_number") ?? "",
     position: formData.get("position") ?? "",
     phone: formData.get("phone") ?? "",
     notes: formData.get("notes") ?? "",
-    // Unchecked checkboxes don't submit a value; checked submits "on".
-    // Coerce both cases to boolean so Zod's z.boolean() field is happy.
-    show_magnet: formData.get("show_magnet") === "on",
+    show_magnet,
   });
 }
 

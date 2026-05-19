@@ -73,11 +73,13 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: (() => void) |
     <div className="flex flex-col gap-4">
       {/* Hidden-from-board status sits at the top of the read-only view, in
           parallel with the checkbox at the top of EditFields. Only render when
-          it's actually off — the default (true) is the common case. */}
+          it's actually off — the default (true) is the common case. No label
+          prop here: this row is a status statement (not a field+value pair),
+          so the visible text alone is the right screen-reader announcement.
+          Other DetailIconRows in this file pair `label="Phone"` with a value
+          like "555-0142" — that pattern doesn't apply for a boolean flag. */}
       {!person.show_magnet && (
-        <DetailIconRow icon={EyeOffIcon} label="Hidden from magnet board">
-          Hidden from magnet board
-        </DetailIconRow>
+        <DetailIconRow icon={EyeOffIcon}>Hidden from magnet board</DetailIconRow>
       )}
 
       {hasAny ? (
@@ -148,11 +150,16 @@ function EditFields({
 
       {/* Show-magnet sits at the top of the form (right under the Current
           project card on the page) so the visibility controls group together —
-          "where this person is" + "do we show their magnet at all." */}
+          "where this person is" + "do we show their magnet at all."
+          The hidden "off" input lets parseFormData distinguish "intentionally
+          unchecked" from "form didn't include the field" (stale/cached page).
+          See src/app/people/actions.ts for the getAll() handling. */}
       <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <input type="hidden" name="show_magnet" value="off" />
         <input
           type="checkbox"
           name="show_magnet"
+          value="on"
           defaultChecked={person.show_magnet}
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
         />

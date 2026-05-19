@@ -134,9 +134,14 @@ function RemoveButton({
     <form
       action={formAction}
       onSubmit={(e) => {
+        // Copy is intentionally cautious about session revocation: we attempt
+        // a global deleteUser, but if the auth-user lookup or delete itself
+        // fails we still remove the allowlist row (no future sign-in possible)
+        // and log the partial failure. So promise the allowlist outcome —
+        // which is guaranteed once this returns ok — not the session outcome.
         if (
           !window.confirm(
-            `Remove ${email}? They'll be signed out immediately and won't be able to sign back in until re-added.`,
+            `Remove ${email}? They won't be able to sign back in until re-added, and any active session will be ended on their next request.`,
           )
         ) {
           e.preventDefault();

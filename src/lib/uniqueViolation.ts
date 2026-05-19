@@ -20,5 +20,11 @@ export function uniqueViolationMessage(error: PostgrestError | null): string | n
   if (details.includes("(employee_number)")) {
     return "That employee number is already used by another employee.";
   }
+  // Assumes `app_users.email` is the only table with a unique email column.
+  // If we ever add another (e.g. invite-tracking), disambiguate by also
+  // inspecting the constraint name in `error.message` (`app_users_pkey`).
+  if (details.includes("(email)")) {
+    return "That email is already on the allowlist.";
+  }
   return null;
 }

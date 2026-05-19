@@ -92,28 +92,29 @@ Tenants are addressed by their display name: `dev` (project `whoswhere-dev`), `d
 
 ### Managing users (allowlist + roles)
 
-The auth gate reads from a per-tenant Supabase table, **`public.app_users`** — `email text primary key, role text check (role in ('admin','audit')), created_at`. `admin` rows have today's full CRUD; `audit` rows can read the magnet board + detail views but can't create / edit / archive / restore / import / drag.
+The auth gate reads from a per-tenant Supabase table, **`public.app_users`** — `email text primary key, role text check (role in ('admin','audit')), created_at`. `admin` rows have full CRUD; `audit` rows can read the magnet board + detail views but can't create / edit / archive / restore / import / drag.
+
+**Day-to-day: use the UI.** Admin signs in, hits **More → Manage users** to add/change-role/remove rows. Changes take effect immediately on the next sign-in attempt; on remove, the server also deletes the corresponding `auth.users` row via the admin API, which cascades to refresh tokens and effectively signs the user out globally on their next request (no waiting on the 30-day refresh-token TTL). Self-modification is blocked at the UI AND the server-action layer.
+
+**Escape hatches for the cases the UI can't cover** — run from `./scripts/db.sh push <tenant>`-linked CLI:
 
 ```sh
-# Add a user (link to the right tenant first; ./scripts/db.sh push <tenant> sets the link).
+# First-admin bootstrap on a fresh tenant. The /users UI requires an admin
+# already in app_users, so the first row goes in via SQL.
 supabase db query --linked "
   insert into public.app_users (email, role) values
     ('person@example.com', 'admin');
 "
 
-# Inspect.
+# Last-admin recovery. If you ever demote/remove your only admin row by
+# accident (SQL typo on a fresh tenant, etc.), use SQL to fix it:
+supabase db query --linked "update public.app_users set role = 'admin' where email = 'person@example.com';"
+
+# Read-only inspection — handy for verifying state without touching the UI.
 supabase db query --linked "select email, role, created_at from public.app_users order by email;"
-
-# Promote / demote.
-supabase db query --linked "update public.app_users set role = 'audit' where email = 'person@example.com';"
-
-# Remove.
-supabase db query --linked "delete from public.app_users where email = 'person@example.com';"
 ```
 
-Until the Phase 2 `/users` admin UI lands, the SQL path is the source of truth — no Vercel redeploy required, the change takes effect on the next sign-in attempt. **Existing sessions for a removed/demoted user keep their read access until they sign out or the session expires** — middleware doesn't consult `app_users`, and SELECT RLS on `projects` + `people` is permissive for any authenticated user. Writes are denied as soon as their next request hits `private.is_admin()` (or `assertAdmin()` in the server actions). Explicit session revocation on user removal is a Phase 2 follow-up.
-
-The `private.is_admin()` SECURITY DEFINER function plus tightened RLS policies (`admin_insert_projects` / `admin_update_projects` / same for people) are the authoritative gate. Server actions also call `adminGuard()` from `src/lib/auth.ts` so audit attempts surface a friendly "Read-only account" message instead of a generic RLS denial.
+**Where the gates live.** `private.is_admin()` (SECURITY DEFINER) is the authoritative check used by RLS policies on `projects` + `people` writes; server actions also call `adminGuard()` from `src/lib/auth.ts` so audit attempts surface a friendly "Read-only account" message instead of a generic RLS denial. Removed users keep their read access only until their next request — `deleteUser` cascades to sessions, and middleware's `auth.getUser()` returns null after that, redirecting to `/sign-in`.
 
 ### Auth + multi-tenant security
 

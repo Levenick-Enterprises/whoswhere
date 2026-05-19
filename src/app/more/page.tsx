@@ -15,12 +15,16 @@ export default async function MorePage() {
   const supabase = await createSupabaseServerClient();
   const canEdit = (await getCurrentUserRole()) === "admin";
 
+  // Only admins can SELECT all of app_users (audit users only see their own
+  // row via self_select_app_users RLS). Fetch the count conditionally so we
+  // don't surface an RLS-denied count or a misleading "1" to audit users.
   const [
     { count: trashedProjects, error: projErr },
     { count: trashedPeople, error: pErr },
     {
       data: { user },
     },
+    appUsersCountResult,
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -31,6 +35,9 @@ export default async function MorePage() {
       .select("*", { count: "exact", head: true })
       .not("archived_at", "is", null),
     supabase.auth.getUser(),
+    canEdit
+      ? supabase.from("app_users").select("*", { count: "exact", head: true })
+      : Promise.resolve({ count: null, error: null }),
   ]);
 
   if (projErr || pErr) {
@@ -38,8 +45,14 @@ export default async function MorePage() {
       `Supabase fetch failed — projects: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
     );
   }
+  if (appUsersCountResult.error) {
+    throw new Error(
+      `Supabase app_users count failed: ${JSON.stringify(appUsersCountResult.error)}`,
+    );
+  }
 
   const trashTotal = (trashedProjects ?? 0) + (trashedPeople ?? 0);
+  const appUsersCount = appUsersCountResult.count ?? 0;
 
   return (
     <section className="flex flex-col gap-4">
@@ -85,6 +98,19 @@ export default async function MorePage() {
                 Bulk-add people from a spreadsheet. Map a Project column to auto-assign them.
               </span>
             </div>
+          </Link>
+
+          <Link
+            href="/users"
+            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Manage users</span>
+              <span className="text-xs text-zinc-500">Add, change role, or remove access.</span>
+            </div>
+            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
+              {appUsersCount}
+            </span>
           </Link>
 
           <Link

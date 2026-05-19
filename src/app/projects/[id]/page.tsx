@@ -12,20 +12,37 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data: project, error } = await supabase
-    .from("projects")
-    .select("id, name, address, notes, archived_at, people(id, name)")
-    .eq("id", id)
-    .is("archived_at", null)
-    .is("people.archived_at", null)
-    .maybeSingle();
+  // Project + crew in two separate queries rather than an embedded
+  // `people(id, name)` join with `.is("people.archived_at", null)`. Two
+  // simple queries are easier to reason about and surface RLS / cache
+  // issues with a clear error.
+  const [projectResult, peopleResult] = await Promise.all([
+    supabase
+      .from("projects")
+      .select(
+        "id, name, project_number, address, project_executive, project_manager, project_engineer, superintendent, project_coordinator, notes",
+      )
+      .eq("id", id)
+      .is("archived_at", null)
+      .maybeSingle(),
+    supabase
+      .from("people")
+      .select("id, name")
+      .eq("current_project_id", id)
+      .is("archived_at", null)
+      .order("name", { ascending: true }),
+  ]);
 
-  if (error) {
-    throw new Error(`fetch project failed: ${JSON.stringify(error)}`);
+  if (projectResult.error) {
+    throw new Error(`fetch project failed: ${JSON.stringify(projectResult.error)}`);
   }
-  if (!project) notFound();
+  if (!projectResult.data) notFound();
+  if (peopleResult.error) {
+    throw new Error(`fetch project crew failed: ${JSON.stringify(peopleResult.error)}`);
+  }
 
-  const crew = project.people.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const project = projectResult.data;
+  const crew = peopleResult.data ?? [];
 
   const updateWithId = updateProjectAction.bind(null, project.id);
   const deleteWithId = deleteProjectAction.bind(null, project.id);
@@ -71,7 +88,13 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         project={{
           id: project.id,
           name: project.name,
+          project_number: project.project_number,
           address: project.address,
+          project_executive: project.project_executive,
+          project_manager: project.project_manager,
+          project_engineer: project.project_engineer,
+          superintendent: project.superintendent,
+          project_coordinator: project.project_coordinator,
           notes: project.notes,
         }}
         updateAction={updateWithId}

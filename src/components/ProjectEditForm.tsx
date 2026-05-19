@@ -7,7 +7,7 @@ import { DetailIconRow } from "@/components/DetailIconRow";
 import { EditModeControls } from "@/components/EditModeControls";
 import { FormErrorBanner } from "@/components/FormErrorBanner";
 import { FormField, inputClass } from "@/components/FormField";
-import { FileTextIcon, MapPinIcon } from "@/components/icons";
+import { FileTextIcon, HashIcon, MapPinIcon } from "@/components/icons";
 import { MapsLinkButton } from "@/components/MapsLinkButton";
 import { ACTION_OK, type ActionResult } from "@/lib/action-result";
 import { useRegisterBusyOnce } from "@/lib/page-busy";
@@ -15,11 +15,27 @@ import { useRegisterBusyOnce } from "@/lib/page-busy";
 type Project = {
   id: string;
   name: string;
+  project_number: string | null;
   address: string | null;
+  project_executive: string | null;
+  project_manager: string | null;
+  project_engineer: string | null;
+  superintendent: string | null;
+  project_coordinator: string | null;
   notes: string | null;
 };
 
 type FormAction = (prev: ActionResult, formData: FormData) => Promise<ActionResult>;
+
+// Display labels for the role rows in the ViewFields metadata block. Order
+// matches the form so editing + viewing feel consistent.
+const ROLE_FIELDS: ReadonlyArray<{ key: keyof Project; label: string }> = [
+  { key: "project_executive", label: "Project Executive" },
+  { key: "project_manager", label: "Project Manager" },
+  { key: "project_engineer", label: "Project Engineer" },
+  { key: "superintendent", label: "Superintendent" },
+  { key: "project_coordinator", label: "Project Coordinator" },
+];
 
 export function ProjectEditForm({
   project,
@@ -57,12 +73,19 @@ export function ProjectEditForm({
 }
 
 function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void }) {
-  const hasAny = project.address || project.notes;
+  const populatedRoles = ROLE_FIELDS.filter((r) => project[r.key]);
+  const hasAny =
+    project.project_number || project.address || project.notes || populatedRoles.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
       {hasAny ? (
         <div className="flex flex-col gap-1">
+          {project.project_number && (
+            <DetailIconRow icon={HashIcon} label="Project number">
+              <span className="font-mono">{project.project_number}</span>
+            </DetailIconRow>
+          )}
           {project.address && (
             <MapsLinkButton
               address={project.address}
@@ -79,6 +102,16 @@ function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void 
               </span>
             </MapsLinkButton>
           )}
+          {populatedRoles.length > 0 && (
+            <dl className="flex flex-col gap-1 px-3 py-2 text-sm">
+              {populatedRoles.map((r) => (
+                <div key={r.key} className="flex flex-wrap gap-x-2">
+                  <dt className="text-zinc-500 dark:text-zinc-400">{r.label}:</dt>
+                  <dd className="text-zinc-900 dark:text-zinc-100">{project[r.key]}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           {project.notes && (
             <DetailIconRow icon={FileTextIcon} label="Notes">
               {project.notes}
@@ -87,7 +120,7 @@ function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void 
         </div>
       ) : (
         <p className="px-3 py-2 text-sm italic text-zinc-500">
-          No address or notes yet. Tap Edit to add.
+          No metadata yet. Tap Edit to add a project number, address, roles, or notes.
         </p>
       )}
 
@@ -125,12 +158,74 @@ function EditFields({
         />
       </FormField>
 
+      <FormField label="Project number">
+        <input
+          type="text"
+          name="project_number"
+          inputMode="text"
+          maxLength={50}
+          defaultValue={project.project_number ?? ""}
+          placeholder="PRJ-0042"
+          className={inputClass}
+        />
+      </FormField>
+
       <FormField label="Address">
         <input
           type="text"
           name="address"
           maxLength={500}
           defaultValue={project.address ?? ""}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Project executive">
+        <input
+          type="text"
+          name="project_executive"
+          maxLength={100}
+          defaultValue={project.project_executive ?? ""}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Project manager">
+        <input
+          type="text"
+          name="project_manager"
+          maxLength={100}
+          defaultValue={project.project_manager ?? ""}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Project engineer">
+        <input
+          type="text"
+          name="project_engineer"
+          maxLength={100}
+          defaultValue={project.project_engineer ?? ""}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Superintendent">
+        <input
+          type="text"
+          name="superintendent"
+          maxLength={100}
+          defaultValue={project.superintendent ?? ""}
+          className={inputClass}
+        />
+      </FormField>
+
+      <FormField label="Project coordinator">
+        <input
+          type="text"
+          name="project_coordinator"
+          maxLength={100}
+          defaultValue={project.project_coordinator ?? ""}
           className={inputClass}
         />
       </FormField>

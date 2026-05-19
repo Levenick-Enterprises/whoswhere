@@ -38,6 +38,7 @@ export type Database = {
           archived_at: string | null;
           created_at: string;
           current_project_id: string | null;
+          employee_number: string | null;
           id: string;
           name: string;
           notes: string | null;
@@ -48,6 +49,7 @@ export type Database = {
           archived_at?: string | null;
           created_at?: string;
           current_project_id?: string | null;
+          employee_number?: string | null;
           id?: string;
           name: string;
           notes?: string | null;
@@ -58,6 +60,7 @@ export type Database = {
           archived_at?: string | null;
           created_at?: string;
           current_project_id?: string | null;
+          employee_number?: string | null;
           id?: string;
           name?: string;
           notes?: string | null;
@@ -82,6 +85,12 @@ export type Database = {
           id: string;
           name: string;
           notes: string | null;
+          project_coordinator: string | null;
+          project_engineer: string | null;
+          project_executive: string | null;
+          project_manager: string | null;
+          project_number: string | null;
+          superintendent: string | null;
         };
         Insert: {
           address?: string | null;
@@ -90,6 +99,12 @@ export type Database = {
           id?: string;
           name: string;
           notes?: string | null;
+          project_coordinator?: string | null;
+          project_engineer?: string | null;
+          project_executive?: string | null;
+          project_manager?: string | null;
+          project_number?: string | null;
+          superintendent?: string | null;
         };
         Update: {
           address?: string | null;
@@ -98,6 +113,12 @@ export type Database = {
           id?: string;
           name?: string;
           notes?: string | null;
+          project_coordinator?: string | null;
+          project_engineer?: string | null;
+          project_executive?: string | null;
+          project_manager?: string | null;
+          project_number?: string | null;
+          superintendent?: string | null;
         };
         Relationships: [];
       };

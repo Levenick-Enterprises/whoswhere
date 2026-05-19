@@ -5,13 +5,22 @@
 // Generic enough for any entity. `sniffMapping` is fully type-parameterized,
 // so adding a new entity is just a new field type + synonym dict export.
 
-export type ProjectField = "name" | "address" | "notes";
+export type ProjectField =
+  | "name"
+  | "project_number"
+  | "address"
+  | "project_executive"
+  | "project_manager"
+  | "project_engineer"
+  | "superintendent"
+  | "project_coordinator"
+  | "notes";
 
 // `project` here is the *target project name* — the import resolves names
 // to IDs against the current set of active projects, then writes the row's
 // `current_project_id`. No-match values leave the imported person
 // unassigned (visible in the preview before commit).
-export type PersonField = "name" | "position" | "phone" | "notes" | "project";
+export type PersonField = "name" | "employee_number" | "position" | "phone" | "notes" | "project";
 
 /**
  * Result of sniffing: each CSV header maps to one of our schema fields,
@@ -37,7 +46,27 @@ export const PROJECT_HEADER_SYNONYMS: Record<ProjectField, readonly string[]> = 
     "jobsite name",
     "project name",
   ],
+  project_number: [
+    "project number",
+    "project #",
+    "project no",
+    "project no.",
+    "proj #",
+    "proj no",
+    "project id",
+    "pn",
+  ],
   address: ["address", "addr", "street", "location", "site address", "project address"],
+  // Role-field synonyms intentionally avoid the most ambiguous abbreviations
+  // ("exec", "super", "emp" — too easy to collide with unrelated headers).
+  // "PE" maps to project_engineer (construction-industry convention; per
+  // Copilot review on PR #59); operators with a CSV where "PE" means
+  // something else can manually override in the mapping UI.
+  project_executive: ["project executive", "executive"],
+  project_manager: ["project manager", "manager", "pm"],
+  project_engineer: ["project engineer", "engineer", "pe"],
+  superintendent: ["superintendent", "supt"],
+  project_coordinator: ["project coordinator", "coordinator", "pc"],
   notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
 };
 
@@ -51,6 +80,15 @@ export const PERSON_HEADER_SYNONYMS: Record<PersonField, readonly string[]> = {
     "employee",
     "employee name",
     "worker",
+  ],
+  employee_number: [
+    "employee number",
+    "employee #",
+    "employee no",
+    "emp #",
+    "emp no",
+    "empl no",
+    "employee id",
   ],
   position: ["position", "role", "title", "job", "job title", "occupation"],
   phone: ["phone", "cell", "mobile", "phone number", "tel", "telephone"],

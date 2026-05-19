@@ -21,7 +21,13 @@ import { bulkCreateProjectsAction } from "../actions";
 const FIELD_OPTIONS: ReadonlyArray<{ value: ProjectField | "ignore"; label: string }> = [
   { value: "ignore", label: "Skip this column" },
   { value: "name", label: "Name" },
+  { value: "project_number", label: "Project #" },
   { value: "address", label: "Address" },
+  { value: "project_executive", label: "Project Exec" },
+  { value: "project_manager", label: "Project Mgr" },
+  { value: "project_engineer", label: "Project Eng" },
+  { value: "superintendent", label: "Superintendent" },
+  { value: "project_coordinator", label: "Project Coord" },
   { value: "notes", label: "Notes" },
 ];
 
@@ -131,7 +137,13 @@ export function ImportProjectsForm() {
       // string (nullableTrimmed transforms empty → null on its own).
       return {
         name: out.name ?? "",
+        project_number: out.project_number ?? "",
         address: out.address ?? "",
+        project_executive: out.project_executive ?? "",
+        project_manager: out.project_manager ?? "",
+        project_engineer: out.project_engineer ?? "",
+        superintendent: out.superintendent ?? "",
+        project_coordinator: out.project_coordinator ?? "",
         notes: out.notes ?? "",
       };
     });
@@ -247,7 +259,13 @@ export function ImportProjectsForm() {
                 <thead className="bg-zinc-50 text-left dark:bg-zinc-900">
                   <tr>
                     <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Project #</th>
                     <th className="px-3 py-2 font-medium">Address</th>
+                    <th className="px-3 py-2 font-medium">Proj Exec</th>
+                    <th className="px-3 py-2 font-medium">Proj Mgr</th>
+                    <th className="px-3 py-2 font-medium">Proj Eng</th>
+                    <th className="px-3 py-2 font-medium">Supt</th>
+                    <th className="px-3 py-2 font-medium">Proj Coord</th>
                     <th className="px-3 py-2 font-medium">Notes</th>
                   </tr>
                 </thead>
@@ -258,7 +276,25 @@ export function ImportProjectsForm() {
                         {row.name || <em className="text-zinc-400">(empty)</em>}
                       </td>
                       <td className="px-3 py-2">
+                        {row.project_number || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
                         {row.address || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.project_executive || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.project_manager || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.project_engineer || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.superintendent || <em className="text-zinc-400">—</em>}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.project_coordinator || <em className="text-zinc-400">—</em>}
                       </td>
                       <td className="px-3 py-2">
                         {row.notes || <em className="text-zinc-400">—</em>}

@@ -11,10 +11,12 @@ import {
 } from "@/lib/csv-import-mappings";
 import { importPersonRowSchema, personInputSchema, type PersonInput } from "@/lib/schemas/person";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { uniqueViolationMessage } from "@/lib/uniqueViolation";
 
 function parseFormData(formData: FormData) {
   return personInputSchema.safeParse({
     name: formData.get("name") ?? "",
+    employee_number: formData.get("employee_number") ?? "",
     position: formData.get("position") ?? "",
     phone: formData.get("phone") ?? "",
     notes: formData.get("notes") ?? "",
@@ -35,7 +37,8 @@ export async function createPersonAction(
 
   if (error) {
     console.error("[createPerson] supabase:", error);
-    return { ok: false, message: "Couldn't create. Please try again." };
+    const friendly = uniqueViolationMessage(error);
+    return { ok: false, message: friendly ?? "Couldn't create. Please try again." };
   }
 
   revalidatePath("/people");
@@ -57,7 +60,8 @@ export async function updatePersonAction(
 
   if (error) {
     console.error("[updatePerson] supabase:", error);
-    return { ok: false, message: "Couldn't save. Please try again." };
+    const friendly = uniqueViolationMessage(error);
+    return { ok: false, message: friendly ?? "Couldn't save. Please try again." };
   }
 
   revalidatePath("/people");
@@ -298,6 +302,13 @@ export async function bulkCreatePeopleAction(
   const { error } = await supabase.from("people").insert(insertRows).select("id");
   if (error) {
     console.error("[bulkCreatePeople] supabase:", error);
+    const friendly = uniqueViolationMessage(error);
+    if (friendly) {
+      return {
+        ok: false,
+        message: `${friendly} Check your CSV for duplicate values and try again.`,
+      };
+    }
     return { ok: false, message: "Couldn't import. Please try again." };
   }
 

@@ -24,6 +24,16 @@ create table public.app_users (
 
 alter table public.app_users enable row level security;
 
+-- "Automatically expose new tables" is OFF on this project, so DML grants
+-- don't auto-attach to authenticated when the table is created. service_role
+-- happens to get auto-granted but matches existing migrations grant it
+-- explicitly anyway. Without these, the cookie-backed server client (running
+-- as `authenticated`) would hit "permission denied for table app_users"
+-- before RLS even gets a chance to filter rows — getCurrentUserRole() would
+-- silently return null and every authed user would look read-only.
+grant select, insert, update, delete on public.app_users to authenticated;
+grant select, insert, update, delete on public.app_users to service_role;
+
 -- private.is_admin(): is the current authenticated user an admin?
 -- SECURITY DEFINER so it sees app_users without recursing into its own RLS
 -- when called from a policy. Lives in a private schema (not exposed via the

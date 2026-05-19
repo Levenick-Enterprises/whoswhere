@@ -25,11 +25,19 @@ export async function getCurrentUserRole(): Promise<UserRole | null> {
   // Normalize to stay in lockstep with the app_users PK convention — Supabase
   // typically stores emails lowercased, but routing through normalizeEmail()
   // makes the lookup case + Unicode invariant regardless.
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("app_users")
     .select("role")
     .eq("email", normalizeEmail(user.email))
     .maybeSingle();
+  if (error) {
+    // Don't fail open — return null so the caller treats the user as
+    // role-less (which means "no admin write access" everywhere). Log so
+    // a misconfigured GRANT / RLS surfaces in Vercel function logs instead
+    // of silently turning every user into read-only.
+    console.error("[auth] app_users lookup failed:", error);
+    return null;
+  }
   if (data?.role === "admin" || data?.role === "audit") return data.role;
   return null;
 }

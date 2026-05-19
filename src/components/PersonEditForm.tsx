@@ -71,6 +71,15 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: (() => void) |
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Hidden-from-board status sits at the top of the read-only view, in
+          parallel with the checkbox at the top of EditFields. Only render when
+          it's actually off — the default (true) is the common case. */}
+      {!person.show_magnet && (
+        <DetailIconRow icon={EyeOffIcon} label="Hidden from magnet board">
+          Hidden from magnet board
+        </DetailIconRow>
+      )}
+
       {hasAny ? (
         <div className="flex flex-col gap-1">
           {person.employee_number && (
@@ -111,14 +120,6 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: (() => void) |
         </p>
       )}
 
-      {/* Only surface the hidden-from-board status when it's actually off — the
-          default (true) is the common case and doesn't need a row. */}
-      {!person.show_magnet && (
-        <DetailIconRow icon={EyeOffIcon} label="Hidden from magnet board">
-          Hidden from magnet board
-        </DetailIconRow>
-      )}
-
       {onEdit && <EditModeControls isEditing={false} onEdit={onEdit} onCancel={() => {}} />}
     </div>
   );
@@ -144,6 +145,27 @@ function EditFields({
   return (
     <form action={formAction} onChange={markBusy} className="flex flex-col gap-4">
       <FormErrorBanner state={state} />
+
+      {/* Show-magnet sits at the top of the form (right under the Current
+          project card on the page) so the visibility controls group together —
+          "where this person is" + "do we show their magnet at all." */}
+      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <input
+          type="checkbox"
+          name="show_magnet"
+          defaultChecked={person.show_magnet}
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Show on magnet board
+          </span>
+          <span className="text-xs text-zinc-500">
+            Uncheck to hide this person&apos;s pill from the Projects board. They still appear on
+            the People tab and in project crew lists.
+          </span>
+        </span>
+      </label>
 
       <FormField label="Name">
         <input
@@ -198,24 +220,6 @@ function EditFields({
           className={inputClass}
         />
       </FormField>
-
-      <label className="flex items-start gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-        <input
-          type="checkbox"
-          name="show_magnet"
-          defaultChecked={person.show_magnet}
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-950 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-950"
-        />
-        <span className="flex flex-col gap-0.5">
-          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Show on magnet board
-          </span>
-          <span className="text-xs text-zinc-500">
-            Uncheck to hide this person&apos;s pill from the Projects board. They still appear on
-            the People tab and in project crew lists.
-          </span>
-        </span>
-      </label>
 
       <EditModeControls isEditing={true} onEdit={() => {}} onCancel={onCancel} />
     </form>

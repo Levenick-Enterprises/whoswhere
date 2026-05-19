@@ -62,6 +62,7 @@ export type Database = {
           notes: string | null;
           phone: string | null;
           position: string | null;
+          show_magnet: boolean;
         };
         Insert: {
           archived_at?: string | null;
@@ -73,6 +74,7 @@ export type Database = {
           notes?: string | null;
           phone?: string | null;
           position?: string | null;
+          show_magnet?: boolean;
         };
         Update: {
           archived_at?: string | null;
@@ -84,6 +86,7 @@ export type Database = {
           notes?: string | null;
           phone?: string | null;
           position?: string | null;
+          show_magnet?: boolean;
         };
         Relationships: [
           {

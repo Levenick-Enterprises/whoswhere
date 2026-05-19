@@ -10,8 +10,16 @@ export type UserRole = "admin" | "audit";
  * Resolve the current request's user role. Returns `null` when the request
  * is unauthenticated (shouldn't happen on app routes — middleware redirects
  * to /sign-in first — but defensively still null-safe) or when the signed-in
- * user has no `app_users` row (deleted while their session is still valid;
- * effectively read-nothing until the JWT refresh kicks them out).
+ * user has no `app_users` row (e.g. an admin removed them while their session
+ * was still valid).
+ *
+ * A null role gates *writes* — `assertAdmin()` throws ActionPermissionError,
+ * and the admin-only RLS policies on projects/people reject INSERTs/UPDATEs.
+ * Reads stay open: SELECT RLS on those tables is permissive for any
+ * authenticated user, and middleware only checks that a Supabase session
+ * exists (it doesn't consult app_users). So a removed user keeps their
+ * read access until they sign out or the session expires. Explicit session
+ * revocation on user removal is a Phase 2 follow-up.
  *
  * Cheap to call repeatedly within a request: middleware already loaded the
  * session, and `auth.getUser()` short-circuits to the cached value.

@@ -111,7 +111,7 @@ supabase db query --linked "update public.app_users set role = 'audit' where ema
 supabase db query --linked "delete from public.app_users where email = 'person@example.com';"
 ```
 
-Until the Phase 2 `/users` admin UI lands, the SQL path is the source of truth — no Vercel redeploy required, the change takes effect on the next sign-in attempt. Existing sessions for a removed/demoted user keep working until their JWT refreshes (typically minutes to hours); explicit session revocation is a Phase 2 follow-up.
+Until the Phase 2 `/users` admin UI lands, the SQL path is the source of truth — no Vercel redeploy required, the change takes effect on the next sign-in attempt. **Existing sessions for a removed/demoted user keep their read access until they sign out or the session expires** — middleware doesn't consult `app_users`, and SELECT RLS on `projects` + `people` is permissive for any authenticated user. Writes are denied as soon as their next request hits `private.is_admin()` (or `assertAdmin()` in the server actions). Explicit session revocation on user removal is a Phase 2 follow-up.
 
 The `private.is_admin()` SECURITY DEFINER function plus tightened RLS policies (`admin_insert_projects` / `admin_update_projects` / same for people) are the authoritative gate. Server actions also call `adminGuard()` from `src/lib/auth.ts` so audit attempts surface a friendly "Read-only account" message instead of a generic RLS denial.
 

@@ -19,7 +19,15 @@
 create table public.app_users (
   email text primary key,
   role text not null check (role in ('admin', 'audit')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Enforce the lower+trim half of normalizeEmail() at the DB layer so an
+  -- operator's ad-hoc `insert ... ('Michael.Levenick@gmail.com', 'admin')`
+  -- fails loudly with a check-constraint violation instead of silently
+  -- breaking sign-in (where the lookup is exact-match against the
+  -- normalized form). NFKC stays an app-layer concern — Postgres has no
+  -- built-in NFKC and the failure mode (homoglyph paste) is far less
+  -- common than a casual capitalized paste.
+  constraint app_users_email_canonical check (email = lower(btrim(email)))
 );
 
 alter table public.app_users enable row level security;

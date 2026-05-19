@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { CrewPicker } from "./CrewPicker";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AssignCrewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: projectId } = await params;
+  if ((await getCurrentUserRole()) !== "admin") redirect(`/projects/${projectId}`);
+
   const supabase = await createSupabaseServerClient();
 
   const [{ data: project, error: projErr }, { data: people, error: pErr }] = await Promise.all([

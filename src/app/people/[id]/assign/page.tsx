@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { reassignPersonAction } from "@/app/people/actions";
 import { AssignButton } from "@/components/AssignButton";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AssignPersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: personId } = await params;
+  if ((await getCurrentUserRole()) !== "admin") redirect(`/people/${personId}`);
+
   const supabase = await createSupabaseServerClient();
 
   const [{ data: person, error: pErr }, { data: projects, error: projErr }] = await Promise.all([

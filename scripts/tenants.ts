@@ -6,8 +6,10 @@
 // https://vercel.com/account/tokens, scoped to the `michaellevenick-1933`
 // team. Regenerate freely — it encodes no persistent state.
 //
-// Phase 1 commands: list, emails, add-email. Future phases will add
-// remove-email, delete-tenant, create-tenant. Out of scope today.
+// Commands: list, emails (read-only inspection of Vercel env state),
+// add-email (deprecated — the auth gate moved off ALLOWED_EMAILS into the
+// per-tenant Supabase app_users table; use `supabase db query --linked`
+// to add users until the /users UI lands in Phase 2).
 //
 // Tenant ↔ Vercel project naming convention (matches CLAUDE.md
 // "Deployment topology"). Uniform `whoswhere-<tenant>` shape:
@@ -18,6 +20,8 @@
 //
 // Each tenant's public URL is derived from its display name:
 //   `dev` → https://dev.whos-where.com, `<x>` → https://<x>.whos-where.com.
+
+import { normalizeEmail } from "../src/lib/normalizeEmail";
 
 const VERCEL_API = "https://api.vercel.com";
 const ALLOWED_EMAILS_KEY = "ALLOWED_EMAILS";
@@ -55,10 +59,6 @@ const PRODUCTION_TARGET = "production";
 // shape we'd see for ALLOWED_EMAILS, but bucket it as unreadable so we never
 // pretend we have its value.
 const UNREADABLE_ENV_TYPES = new Set<VercelEnv["type"]>(["secret", "sensitive", "system"]);
-
-function normalizeEmail(raw: string): string {
-  return raw.trim().normalize("NFKC").toLowerCase();
-}
 
 function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -227,6 +227,14 @@ async function cmdEmails(display: string): Promise<void> {
 }
 
 async function cmdAddEmail(display: string, rawEmail: string): Promise<void> {
+  console.error(
+    "[deprecated] `pnpm tenant add-email` writes to Vercel's ALLOWED_EMAILS env var, " +
+      "which no longer gates sign-in. The auth gate now reads the per-tenant Supabase " +
+      "`public.app_users` table — add users via `supabase db query --linked` (link the " +
+      "tenant first with `./scripts/db.sh push <tenant>` to set the link). The /users " +
+      "admin UI in Phase 2 will replace this CLI entirely.",
+  );
+
   const email = normalizeEmail(rawEmail);
   if (!isValidEmail(email)) {
     console.error(`'${rawEmail}' doesn't look like a valid email address.`);

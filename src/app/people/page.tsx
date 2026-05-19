@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { PeopleList } from "./PeopleList";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PeoplePage() {
   const supabase = await createSupabaseServerClient();
+  const canEdit = (await getCurrentUserRole()) === "admin";
 
   const { data, error } = await supabase
     .from("people")
@@ -38,12 +40,14 @@ export default async function PeoplePage() {
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
         <div className="flex items-baseline gap-3">
           <span className="text-xs tabular-nums text-zinc-500">{people.length} active</span>
-          <Link
-            href="/people/new"
-            className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-          >
-            + New
-          </Link>
+          {canEdit && (
+            <Link
+              href="/people/new"
+              className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            >
+              + New
+            </Link>
+          )}
         </div>
       </header>
       <PeopleList people={people} />

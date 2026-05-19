@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PersonEditForm } from "@/components/PersonEditForm";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { deletePersonAction, updatePersonAction } from "../actions";
@@ -34,6 +35,21 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
 
   const updateWithId = updatePersonAction.bind(null, person.id);
   const deleteWithId = deletePersonAction.bind(null, person.id);
+  const canEdit = (await getCurrentUserRole()) === "admin";
+
+  const currentProjectInner = (
+    <>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-xs uppercase tracking-wide text-zinc-500">Current project</span>
+        <span className="truncate font-medium">{currentProject?.name ?? "Unassigned"}</span>
+      </div>
+      {canEdit && (
+        <span className="shrink-0 rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          {currentProject ? "Change" : "Assign"} →
+        </span>
+      )}
+    </>
+  );
 
   return (
     <section className="flex flex-col gap-4">
@@ -44,18 +60,18 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         </Link>
       </header>
 
-      <Link
-        href={`/people/${person.id}/assign`}
-        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-xs uppercase tracking-wide text-zinc-500">Current project</span>
-          <span className="truncate font-medium">{currentProject?.name ?? "Unassigned"}</span>
+      {canEdit ? (
+        <Link
+          href={`/people/${person.id}/assign`}
+          className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+        >
+          {currentProjectInner}
+        </Link>
+      ) : (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+          {currentProjectInner}
         </div>
-        <span className="shrink-0 rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          {currentProject ? "Change" : "Assign"} →
-        </span>
-      </Link>
+      )}
 
       <PersonEditForm
         person={{
@@ -68,6 +84,7 @@ export default async function EditPersonPage({ params }: { params: Promise<{ id:
         }}
         updateAction={updateWithId}
         deleteAction={deleteWithId}
+        canEdit={canEdit}
       />
     </section>
   );

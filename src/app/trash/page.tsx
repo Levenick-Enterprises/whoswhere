@@ -1,12 +1,14 @@
 import { restoreProjectAction } from "@/app/projects/actions";
 import { restorePersonAction } from "@/app/people/actions";
 import { RestoreButton } from "@/components/RestoreButton";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
   const supabase = await createSupabaseServerClient();
+  const canEdit = (await getCurrentUserRole()) === "admin";
 
   const [{ data: projects, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
@@ -56,7 +58,7 @@ export default async function TrashPage() {
                         <span className="truncate text-xs text-zinc-500">{j.address}</span>
                       )}
                     </div>
-                    <RestoreButton action={restoreProjectAction.bind(null, j.id)} />
+                    {canEdit && <RestoreButton action={restoreProjectAction.bind(null, j.id)} />}
                   </li>
                 ))}
               </ul>
@@ -75,7 +77,7 @@ export default async function TrashPage() {
                       <span className="truncate font-medium">{p.name}</span>
                       {p.phone && <span className="truncate text-xs text-zinc-500">{p.phone}</span>}
                     </div>
-                    <RestoreButton action={restorePersonAction.bind(null, p.id)} />
+                    {canEdit && <RestoreButton action={restorePersonAction.bind(null, p.id)} />}
                   </li>
                 ))}
               </ul>

@@ -78,36 +78,59 @@ The tenant list lives in `scripts/db.sh`'s `PROD_TENANT_NAMES` / `PROD_TENANT_RE
 
 ### Managing tenants (`pnpm tenant`)
 
-Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to list tenants and edit per-tenant env vars without dashboard clicks. Phase 1 covers list + add-email; `remove-email`, `delete-tenant`, and `create-tenant` are deferred.
+Local CLI at `scripts/tenants.ts`. Talks to the Vercel API directly to inspect per-tenant Vercel projects + env-var state. `list` and `emails` are still useful diagnostic windows; `add-email` is **deprecated** as of #60 — see "Managing users" below for the current path.
 
 ```sh
-pnpm tenant list                                   # table of tenants + URLs + allowlist counts
-pnpm tenant emails <tenant>                        # show ALLOWED_EMAILS for one tenant
-pnpm tenant add-email <tenant> <email@host>        # append an email (idempotent, NFKC-normalized)
+pnpm tenant list                                   # table of tenants + URLs + allowlist counts (Vercel env state)
+pnpm tenant emails <tenant>                        # show the legacy ALLOWED_EMAILS env var for one tenant
+pnpm tenant add-email <tenant> <email@host>        # DEPRECATED — writes to Vercel ALLOWED_EMAILS, which no longer gates sign-in
 ```
 
 Tenants are addressed by their display name: `dev` (project `whoswhere-dev`), `demo` (project `whoswhere-demo`), `<name>` (project `whoswhere-<name>`).
 
 **Token setup.** Generate at https://vercel.com/account/tokens, scope to the `michaellevenick-1933` team, paste into `.env.local` as `VERCEL_API_TOKEN`. Token lives only on your laptop and encodes no persistent state — regenerate any time (lost laptop / rotate). The `.env.local` file is gitignored.
 
-**Redeploy is required.** Vercel bakes env vars into the build, so adding/removing an email via the CLI (or the dashboard) doesn't take effect until the project is redeployed. For dev: hit Redeploy on the project's latest deployment in the Vercel dashboard. For prod tenants: trigger the `Deploy to prod tenant` GH workflow (which respects the production environment gate from PR #49). Auto-redeploy isn't built into the CLI yet — bypassing the gate for prod tenants would weaken it, and the dev redeploy is one click. Could be added in a future phase if friction grows.
+### Managing users (allowlist + roles)
+
+The auth gate reads from a per-tenant Supabase table, **`public.app_users`** — `email text primary key, role text check (role in ('admin','audit')), created_at`. `admin` rows have today's full CRUD; `audit` rows can read the magnet board + detail views but can't create / edit / archive / restore / import / drag.
+
+```sh
+# Add a user (link to the right tenant first; ./scripts/db.sh push <tenant> sets the link).
+supabase db query --linked "
+  insert into public.app_users (email, role) values
+    ('person@example.com', 'admin');
+"
+
+# Inspect.
+supabase db query --linked "select email, role, created_at from public.app_users order by email;"
+
+# Promote / demote.
+supabase db query --linked "update public.app_users set role = 'audit' where email = 'person@example.com';"
+
+# Remove.
+supabase db query --linked "delete from public.app_users where email = 'person@example.com';"
+```
+
+Until the Phase 2 `/users` admin UI lands, the SQL path is the source of truth — no Vercel redeploy required, the change takes effect on the next sign-in attempt. **Existing sessions for a removed/demoted user keep their read access until they sign out or the session expires** — middleware doesn't consult `app_users`, and SELECT RLS on `projects` + `people` is permissive for any authenticated user. Writes are denied as soon as their next request hits `private.is_admin()` (or `assertAdmin()` in the server actions). Explicit session revocation on user removal is a Phase 2 follow-up.
+
+The `private.is_admin()` SECURITY DEFINER function plus tightened RLS policies (`admin_insert_projects` / `admin_update_projects` / same for people) are the authoritative gate. Server actions also call `adminGuard()` from `src/lib/auth.ts` so audit attempts surface a friendly "Read-only account" message instead of a generic RLS denial.
 
 ### Auth + multi-tenant security
 
 Each tenant Supabase project IS the auth realm — sessions don't cross tenant boundaries because each project has its own `auth.users` table and its own session cookies (tied to the project's domain).
 
-**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-project `ALLOWED_EMAILS` env var and, if listed, calls `signInWithOtp`. The email contains a numeric one-time code (length set per-project in Supabase Auth → Providers → Email, default 8). Operator types the code into the `?sent=1` form, which calls `verifyOtp` server-side and mints a session cookie. The post-submit screen is identical regardless of allowlist outcome (no enumeration). `/sign-out` (POST) clears the session.
+**Sign-in flow.** `/sign-in` collects an email; the server action checks it against the per-tenant `public.app_users` table via `createAdminClient()` (service-role, RLS-bypassing — there's no user session yet, so RLS can't gate the read) and, if listed, calls `signInWithOtp`. The email contains a numeric one-time code (length set per-project in Supabase Auth → Providers → Email, default 8). Operator types the code into the `?sent=1` form, which calls `verifyOtp` server-side and mints a session cookie. The post-submit screen is identical regardless of allowlist outcome (no enumeration). `/sign-out` (POST) clears the session.
 
 **Why no magic link in the email body.** Supabase's `signInWithOtp` generates a single token that backs both the typed code and the `{{ .ConfirmationURL }}` link. Mail prefetchers (Gmail, Apple Mail, spam scanners) follow the link's URL on receipt — that hit consumes the single-use token, after which typing the code also fails. Omitting `{{ .ConfirmationURL }}` from the Supabase email template eliminates the URL surface that prefetchers can attack while leaving the verify endpoint intact. The `/auth/callback` route and `emailRedirectTo` option in `signInWithOtp` are kept alive defensively — they cost nothing, handle in-flight emails sent before a template change, and preserve a re-enable path without code changes.
 
-**Where the gate lives.** `src/middleware.ts` refreshes the cookie on every request and redirects unauthenticated traffic to `/sign-in`. Server components, server actions, and route handlers use `createSupabaseServerClient()` from `src/lib/supabase/server.ts` (cookie-backed, RLS-aware). The legacy `createAdminClient()` (secret-key, RLS-bypassing) in `src/lib/supabase/admin.ts` is kept around as a server-only escape hatch but is not referenced by any route after #2 — reserve it for future bulk imports / scripts / webhooks.
+**Where the gate lives.** `src/middleware.ts` refreshes the cookie on every request and redirects unauthenticated traffic to `/sign-in`. Server components, server actions, and route handlers use `createSupabaseServerClient()` from `src/lib/supabase/server.ts` (cookie-backed, RLS-aware). `createAdminClient()` (secret-key, RLS-bypassing) in `src/lib/supabase/admin.ts` is reserved for the sign-in `app_users` lookup (no session yet at sign-in time) and future bulk imports / scripts / webhooks.
 
-**RLS scope today.** Single-foreman-per-tenant means policies are intentionally permissive — `to authenticated using (true)` on both tables. When issue #8 (multi-foreman) ships, narrow these to `auth.uid()`-scoped policies. Don't mistake the current shape for the long-term model.
+**RLS scope today.** Reads stay open for any authenticated user (`for select to authenticated using (true)` on `projects` + `people`). Writes are gated on `private.is_admin()`, which checks the caller's row in `app_users`. DELETE is still uncovered for the `authenticated` role (soft-delete only). When issue #8 (project-scoped permissions) ships, narrow further to `auth.uid()`-scoped policies.
 
 **Per-tenant onboarding for auth.** When standing up a new tenant alongside the existing recipe in "Adding a new tenant":
 
 1. Supabase dashboard → Authentication → URL Configuration: add `https://<tenant>.whos-where.com/auth/callback` to Redirect URLs. For dev also add `http://localhost:3000/auth/callback`.
-2. Supabase dashboard → Authentication → Sign In / Up: **toggle OFF "Confirm email"**. Default is ON, which sends a separate "Confirm signup" email on first auth for any new user (uses a different template than "Magic Link", customizing only Magic Link leaves the first send broken). `ALLOWED_EMAILS` is already the gate that vets who can sign in, so the confirm-signup step is redundant for whoswhere — turning it off means first-send and nth-send both use the Magic Link template, so there's only one template to customize.
+2. Supabase dashboard → Authentication → Sign In / Up: **toggle OFF "Confirm email"**. Default is ON, which sends a separate "Confirm signup" email on first auth for any new user (uses a different template than "Magic Link", customizing only Magic Link leaves the first send broken). `app_users` is already the gate that vets who can sign in, so the confirm-signup step is redundant for whoswhere — turning it off means first-send and nth-send both use the Magic Link template, so there's only one template to customize.
 3. Supabase dashboard → Authentication → Email Templates → Magic Link: replace the default body (which is just the link) with a code-first template. **Omit `{{ .ConfirmationURL }}` entirely** to deny mail prefetchers a URL to consume — see "Why no magic link in the email body" above. Suggested subject + body (the code-first ordering also gets the code into the lock-screen preview AND maximizes iOS one-time-code autofill from `<input autocomplete="one-time-code">`):
 
    ```
@@ -118,10 +141,19 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
    This code expires in 1 hour.
    ```
 
-4. Push the `enable_authed_access` migration (alongside any other pending schema): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
-5. Vercel project → Settings → Environment Variables, **Production scope only**:
-   - `ALLOWED_EMAILS` — comma-separated addresses authorized for this tenant.
+4. Push pending migrations (`enable_authed_access` and everything after, including `add_app_users_and_role_split`): `./scripts/db.sh push <tenant>` (or `pnpm db:push` for dev).
+5. **Seed the first admin row in `app_users`** — without this, sign-in is closed for everyone on the tenant. The operator's email goes in as `admin`:
+
+   ```sh
+   supabase db query --linked "
+     insert into public.app_users (email, role) values
+       ('<operator-email>', 'admin');
+   "
+   ```
+
+6. Vercel project → Settings → Environment Variables, **Production scope only**:
    - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
+   - (`ALLOWED_EMAILS` is no longer required — the table is the gate. Existing tenants can delete the Vercel env var after smoke-testing the post-deploy sign-in path.)
 
 ### Deferred ops
 

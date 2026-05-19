@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { ImportPeopleForm } from "./ImportPeopleForm";
@@ -7,6 +9,8 @@ import { ImportPeopleForm } from "./ImportPeopleForm";
 export const dynamic = "force-dynamic";
 
 export default async function ImportPeoplePage() {
+  if ((await getCurrentUserRole()) !== "admin") redirect("/people");
+
   // Active projects are passed to the client form so it can resolve the
   // mapped "Project" column name → ID for each row before submit, AND
   // show the resolved-or-not state in the preview table. Fail closed on

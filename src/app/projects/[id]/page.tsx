@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ProjectEditForm } from "@/components/ProjectEditForm";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { deleteProjectAction, updateProjectAction } from "../actions";
@@ -43,9 +44,39 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
 
   const project = projectResult.data;
   const crew = peopleResult.data ?? [];
+  const canEdit = (await getCurrentUserRole()) === "admin";
 
   const updateWithId = updateProjectAction.bind(null, project.id);
   const deleteWithId = deleteProjectAction.bind(null, project.id);
+
+  const crewCard = (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+        Who&apos;s here? ({crew.length})
+      </span>
+      {canEdit && (
+        <span className="rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          {crew.length === 0 ? "Add crew" : "Manage"} →
+        </span>
+      )}
+    </div>
+  );
+
+  const crewBody =
+    crew.length === 0 ? (
+      <span className="text-sm text-zinc-500">No one assigned here yet.</span>
+    ) : (
+      <ul className="flex flex-wrap gap-1.5">
+        {crew.map((person) => (
+          <li
+            key={person.id}
+            className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+          >
+            {person.name}
+          </li>
+        ))}
+      </ul>
+    );
 
   return (
     <section className="flex flex-col gap-4">
@@ -56,33 +87,20 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         </Link>
       </header>
 
-      <Link
-        href={`/projects/${project.id}/assign`}
-        className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            Who&apos;s here? ({crew.length})
-          </span>
-          <span className="rounded-md bg-zinc-100 px-3 py-1 text-sm font-medium text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            {crew.length === 0 ? "Add crew" : "Manage"} →
-          </span>
+      {canEdit ? (
+        <Link
+          href={`/projects/${project.id}/assign`}
+          className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+        >
+          {crewCard}
+          {crewBody}
+        </Link>
+      ) : (
+        <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+          {crewCard}
+          {crewBody}
         </div>
-        {crew.length === 0 ? (
-          <span className="text-sm text-zinc-500">No one assigned here yet.</span>
-        ) : (
-          <ul className="flex flex-wrap gap-1.5">
-            {crew.map((person) => (
-              <li
-                key={person.id}
-                className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              >
-                {person.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Link>
+      )}
 
       <ProjectEditForm
         project={{
@@ -99,6 +117,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         }}
         updateAction={updateWithId}
         deleteAction={deleteWithId}
+        canEdit={canEdit}
       />
     </section>
   );

@@ -1,8 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { getCurrentUserRole } from "@/lib/auth";
 
 import { NewPersonForm } from "./NewPersonForm";
 
-export default function NewPersonPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewPersonPage() {
+  if ((await getCurrentUserRole()) !== "admin") redirect("/people");
+
   return (
     <section className="flex flex-col gap-4">
       <header className="flex items-baseline justify-between gap-3">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { ProjectsList } from "./ProjectsList";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
   const supabase = await createSupabaseServerClient();
+  const canEdit = (await getCurrentUserRole()) === "admin";
 
   const [{ data: projects, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
@@ -46,15 +48,17 @@ export default async function ProjectsPage() {
           <span className="text-xs tabular-nums text-zinc-500">
             {(projects ?? []).length} active
           </span>
-          <Link
-            href="/projects/new"
-            className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-          >
-            + New
-          </Link>
+          {canEdit && (
+            <Link
+              href="/projects/new"
+              className="rounded-md bg-zinc-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            >
+              + New
+            </Link>
+          )}
         </div>
       </header>
-      <ProjectsList projects={projects ?? []} people={normalizedPeople} />
+      <ProjectsList projects={projects ?? []} people={normalizedPeople} canEdit={canEdit} />
     </section>
   );
 }

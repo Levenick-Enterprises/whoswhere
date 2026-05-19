@@ -33,33 +33,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      projects: {
-        Row: {
-          address: string | null;
-          archived_at: string | null;
-          created_at: string;
-          id: string;
-          name: string;
-          notes: string | null;
-        };
-        Insert: {
-          address?: string | null;
-          archived_at?: string | null;
-          created_at?: string;
-          id?: string;
-          name: string;
-          notes?: string | null;
-        };
-        Update: {
-          address?: string | null;
-          archived_at?: string | null;
-          created_at?: string;
-          id?: string;
-          name?: string;
-          notes?: string | null;
-        };
-        Relationships: [];
-      };
       people: {
         Row: {
           archived_at: string | null;
@@ -100,6 +73,33 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      projects: {
+        Row: {
+          address: string | null;
+          archived_at: string | null;
+          created_at: string;
+          id: string;
+          name: string;
+          notes: string | null;
+        };
+        Insert: {
+          address?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          id?: string;
+          name: string;
+          notes?: string | null;
+        };
+        Update: {
+          address?: string | null;
+          archived_at?: string | null;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+        };
+        Relationships: [];
       };
     };
     Views: {

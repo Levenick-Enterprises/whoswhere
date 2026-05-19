@@ -33,6 +33,24 @@ export type Database = {
   };
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          created_at: string;
+          email: string;
+          role: string;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          role: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          role?: string;
+        };
+        Relationships: [];
+      };
       people: {
         Row: {
           archived_at: string | null;

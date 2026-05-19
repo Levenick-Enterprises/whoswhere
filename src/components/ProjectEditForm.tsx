@@ -41,12 +41,18 @@ export function ProjectEditForm({
   project,
   updateAction,
   deleteAction,
+  canEdit = true,
 }: {
   project: Project;
   updateAction: FormAction;
   deleteAction: FormAction;
+  canEdit?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+
+  if (!canEdit) {
+    return <ViewFields project={project} onEdit={null} />;
+  }
 
   return (
     <>
@@ -72,7 +78,7 @@ export function ProjectEditForm({
   );
 }
 
-function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void }) {
+function ViewFields({ project, onEdit }: { project: Project; onEdit: (() => void) | null }) {
   const populatedRoles = ROLE_FIELDS.filter((r) => project[r.key]);
   const hasAny =
     project.project_number || project.address || project.notes || populatedRoles.length > 0;
@@ -120,11 +126,13 @@ function ViewFields({ project, onEdit }: { project: Project; onEdit: () => void 
         </div>
       ) : (
         <p className="px-3 py-2 text-sm italic text-zinc-500">
-          No metadata yet. Tap Edit to add a project number, address, roles, or notes.
+          {onEdit
+            ? "No metadata yet. Tap Edit to add a project number, address, roles, or notes."
+            : "No metadata yet."}
         </p>
       )}
 
-      <EditModeControls isEditing={false} onEdit={onEdit} onCancel={() => {}} />
+      {onEdit && <EditModeControls isEditing={false} onEdit={onEdit} onCancel={() => {}} />}
     </div>
   );
 }

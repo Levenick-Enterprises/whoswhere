@@ -3,7 +3,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { normalizeEmail } from "@/lib/normalizeEmail";
 import { publicOrigin, safeNext } from "@/lib/origin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -13,11 +15,23 @@ import {
   SIGNIN_SENT_AT_COOKIE,
 } from "./cookies";
 
-function parseAllowlist(): string[] {
-  return (process.env.ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().normalize("NFKC").toLowerCase())
-    .filter(Boolean);
+// Sign-in happens before there's a user session, so the cookie-backed server
+// client can't read app_users under RLS. Use the admin (service-role) client
+// here — same legitimate escape hatch documented in src/lib/supabase/admin.ts.
+// Fails closed: any error reading the table denies the sign-in attempt rather
+// than risking an open gate during a transient DB issue.
+async function isAllowedEmail(email: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("email")
+    .eq("email", email)
+    .maybeSingle();
+  if (error) {
+    console.error("[sign-in] app_users lookup failed:", error);
+    return false;
+  }
+  return !!data;
 }
 
 function isWithinCooldown(sentAtRaw: string | undefined): boolean {
@@ -37,7 +51,7 @@ function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
 /**
  * Sends an email with a numeric one-time sign-in code (and no clickable
  * link — see CLAUDE.md "Why no magic link in the email body"), but only if
- * the submitted address appears in the per-tenant ALLOWED_EMAILS allowlist.
+ * the submitted address is present in the tenant's public.app_users table.
  * Always redirects to the same neutral "check your email" state regardless
  * of allowlist outcome so an attacker can't enumerate authorized addresses.
  * `next` carries through from the middleware redirect so the user lands on
@@ -57,10 +71,7 @@ function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
  */
 export async function requestSignInCodeAction(formData: FormData) {
   const cookieStore = await cookies();
-  const formEmail = String(formData.get("email") ?? "")
-    .trim()
-    .normalize("NFKC")
-    .toLowerCase();
+  const formEmail = normalizeEmail(String(formData.get("email") ?? ""));
   const rawEmail = formEmail || (cookieStore.get(SIGNIN_EMAIL_COOKIE)?.value ?? "");
   const next = safeNext(String(formData.get("next") ?? ""));
 
@@ -71,7 +82,7 @@ export async function requestSignInCodeAction(formData: FormData) {
   // is allowlisted OR whether the request was throttled.
   const cooldown = isWithinCooldown(cookieStore.get(SIGNIN_SENT_AT_COOKIE)?.value);
 
-  if (!cooldown && rawEmail && parseAllowlist().includes(rawEmail)) {
+  if (!cooldown && rawEmail && (await isAllowedEmail(rawEmail))) {
     const supabase = await createSupabaseServerClient();
     const callbackUrl = new URL(`${await publicOrigin()}/auth/callback`);
     if (next !== "/projects") callbackUrl.searchParams.set("next", next);
@@ -131,7 +142,7 @@ export async function verifyOtpAction(formData: FormData) {
   // that was previously allowlisted but has since been removed could still
   // authenticate. Same generic redirect as other failure paths so attempts
   // remain indistinguishable from invalid codes.
-  if (!parseAllowlist().includes(email)) {
+  if (!(await isAllowedEmail(email))) {
     redirect(buildSentUrl(next, { invalid: true }));
   }
 

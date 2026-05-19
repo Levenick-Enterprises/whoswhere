@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { type ActionResult } from "@/lib/action-result";
+import { adminGuard } from "@/lib/auth";
 import { projectInputSchema, type ProjectInput } from "@/lib/schemas/project";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { uniqueViolationMessage } from "@/lib/uniqueViolation";
@@ -26,6 +27,9 @@ export async function createProjectAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const parsed = parseFormData(formData);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -49,6 +53,9 @@ export async function updateProjectAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const parsed = parseFormData(formData);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -73,6 +80,9 @@ export async function deleteProjectAction(
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("projects")
@@ -95,6 +105,9 @@ export async function restoreProjectAction(
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("projects").update({ archived_at: null }).eq("id", id);
 
@@ -122,13 +135,17 @@ const BULK_IMPORT_MAX_ROWS = 500;
  * whole import with a row-keyed message, so the operator sees exactly
  * which row to fix in their CSV.
  *
- * Runs under the existing `authed_insert_projects` RLS policy (single
- * statement, multiple values) — no policy change required.
+ * Runs under the `admin_insert_projects` RLS policy (single statement,
+ * multiple values). Audit users hit `adminGuard()` first and never reach
+ * the Supabase call.
  */
 export async function bulkCreateProjectsAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const raw = String(formData.get("rows") ?? "");
   let rawRows: unknown;
   try {

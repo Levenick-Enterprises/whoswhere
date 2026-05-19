@@ -27,12 +27,18 @@ export function PersonEditForm({
   person,
   updateAction,
   deleteAction,
+  canEdit = true,
 }: {
   person: Person;
   updateAction: FormAction;
   deleteAction: FormAction;
+  canEdit?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+
+  if (!canEdit) {
+    return <ViewFields person={person} onEdit={null} />;
+  }
 
   return (
     <>
@@ -58,7 +64,7 @@ export function PersonEditForm({
   );
 }
 
-function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) {
+function ViewFields({ person, onEdit }: { person: Person; onEdit: (() => void) | null }) {
   const hasAny = person.employee_number || person.position || person.phone || person.notes;
   const phoneHref = person.phone ? telHref(person.phone) : null;
 
@@ -98,11 +104,13 @@ function ViewFields({ person, onEdit }: { person: Person; onEdit: () => void }) 
         </div>
       ) : (
         <p className="px-3 py-2 text-sm italic text-zinc-500">
-          No employee number, position, phone, or notes yet. Tap Edit to add.
+          {onEdit
+            ? "No employee number, position, phone, or notes yet. Tap Edit to add."
+            : "No employee number, position, phone, or notes yet."}
         </p>
       )}
 
-      <EditModeControls isEditing={false} onEdit={onEdit} onCancel={() => {}} />
+      {onEdit && <EditModeControls isEditing={false} onEdit={onEdit} onCancel={() => {}} />}
     </div>
   );
 }

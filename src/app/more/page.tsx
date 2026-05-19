@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CardSizeSetting } from "@/components/CardSizeSetting";
 import { DragSpeedSetting } from "@/components/DragSpeedSetting";
 import { ThemeSetting } from "@/components/ThemeSetting";
+import { getCurrentUserRole } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ const cardClass =
 
 export default async function MorePage() {
   const supabase = await createSupabaseServerClient();
+  const canEdit = (await getCurrentUserRole()) === "admin";
 
   const [
     { count: trashedProjects, error: projErr },
@@ -61,42 +63,46 @@ export default async function MorePage() {
         <CardSizeSetting />
       </section>
 
-      <Link
-        href="/projects/import"
-        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-medium">Import projects from CSV</span>
-          <span className="text-xs text-zinc-500">Bulk-add projects from a spreadsheet.</span>
-        </div>
-      </Link>
+      {canEdit && (
+        <>
+          <Link
+            href="/projects/import"
+            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Import projects from CSV</span>
+              <span className="text-xs text-zinc-500">Bulk-add projects from a spreadsheet.</span>
+            </div>
+          </Link>
 
-      <Link
-        href="/people/import"
-        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-medium">Import people from CSV</span>
-          <span className="text-xs text-zinc-500">
-            Bulk-add people from a spreadsheet. Map a Project column to auto-assign them.
-          </span>
-        </div>
-      </Link>
+          <Link
+            href="/people/import"
+            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Import people from CSV</span>
+              <span className="text-xs text-zinc-500">
+                Bulk-add people from a spreadsheet. Map a Project column to auto-assign them.
+              </span>
+            </div>
+          </Link>
 
-      <Link
-        href="/trash"
-        className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-      >
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-medium">Trash</span>
-          <span className="text-xs text-zinc-500">
-            Deleted projects and people; restore from here.
-          </span>
-        </div>
-        <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
-          {trashTotal}
-        </span>
-      </Link>
+          <Link
+            href="/trash"
+            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-medium">Trash</span>
+              <span className="text-xs text-zinc-500">
+                Deleted projects and people; restore from here.
+              </span>
+            </div>
+            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">
+              {trashTotal}
+            </span>
+          </Link>
+        </>
+      )}
 
       <form action="/sign-out" method="post" className={cardClass}>
         <div className="flex items-center justify-between gap-3">

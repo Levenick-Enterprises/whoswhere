@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { type ActionResult } from "@/lib/action-result";
+import { adminGuard } from "@/lib/auth";
 import {
   buildProjectLookup,
   normalizeProjectName,
@@ -27,6 +28,9 @@ export async function createPersonAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const parsed = parseFormData(formData);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -50,6 +54,9 @@ export async function updatePersonAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const parsed = parseFormData(formData);
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -74,6 +81,9 @@ export async function deletePersonAction(
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("people")
@@ -96,6 +106,9 @@ export async function restorePersonAction(
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("people").update({ archived_at: null }).eq("id", id);
 
@@ -120,6 +133,9 @@ export async function reassignPerson(
   personId: string,
   projectId: string | null,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const supabase = await createSupabaseServerClient();
 
   const { data: person, error: fetchError } = await supabase
@@ -213,12 +229,16 @@ const BULK_IMPORT_MAX_ROWS = 500;
  * Ambiguous + no-match are silent skips at this layer because the client
  * preview already showed the operator each row's outcome. Schema-failing
  * rows DO error and reject the whole import (all-or-nothing on bad shape).
- * Runs under `authed_insert_people` RLS (no policy change).
+ * Runs under the `admin_insert_people` RLS policy; the `adminGuard()` call
+ * at the top short-circuits audit users before the Supabase round-trip.
  */
 export async function bulkCreatePeopleAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
+  const denied = await adminGuard();
+  if (denied) return denied;
+
   const raw = String(formData.get("rows") ?? "");
   let rawRows: unknown;
   try {

@@ -42,7 +42,15 @@ type Person = {
 
 type OptimisticUpdate = { personId: string; projectId: string | null };
 
-export function ProjectsList({ projects, people }: { projects: Project[]; people: Person[] }) {
+export function ProjectsList({
+  projects,
+  people,
+  canEdit,
+}: {
+  projects: Project[];
+  people: Person[];
+  canEdit: boolean;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [activePerson, setActivePerson] = useState<Person | null>(null);
@@ -188,8 +196,9 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
                 gapClass={sizeClasses.gap}
               >
                 {visibleUnassigned.map((person) => (
-                  <DraggablePill
+                  <PillForRole
                     key={person.id}
+                    canEdit={canEdit}
                     person={person}
                     onOpen={openPerson}
                     pillClass={sizeClasses.pill}
@@ -230,8 +239,9 @@ export function ProjectsList({ projects, people }: { projects: Project[]; people
                   gapClass={sizeClasses.gap}
                 >
                   {displayedPills.map((person) => (
-                    <DraggablePill
+                    <PillForRole
                       key={person.id}
+                      canEdit={canEdit}
                       person={person}
                       onOpen={openPerson}
                       pillClass={sizeClasses.pill}
@@ -305,6 +315,24 @@ function DropZone({
   );
 }
 
+// React forbids conditional hooks, so the draggable variant lives in its
+// own component. Audit users render `ReadOnlyPill` — same look, no DnD
+// handlers, no useDraggable subscription. The DropZones in this list still
+// wrap `useDroppable`, which is harmless when nothing draggable is mounted.
+function PillForRole(props: {
+  canEdit: boolean;
+  person: Person;
+  onOpen: (id: string) => void;
+  pillClass: string;
+}) {
+  if (props.canEdit) {
+    return (
+      <DraggablePill person={props.person} onOpen={props.onOpen} pillClass={props.pillClass} />
+    );
+  }
+  return <ReadOnlyPill person={props.person} onOpen={props.onOpen} pillClass={props.pillClass} />;
+}
+
 function DraggablePill({
   person,
   onOpen,
@@ -332,6 +360,29 @@ function DraggablePill({
             ? "opacity-30"
             : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
         }`}
+      >
+        {person.name}
+      </button>
+    </li>
+  );
+}
+
+function ReadOnlyPill({
+  person,
+  onOpen,
+  pillClass,
+}: {
+  person: Person;
+  onOpen: (id: string) => void;
+  pillClass: string;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-label={`Open ${person.name}'s record`}
+        onClick={() => onOpen(person.id)}
+        className={`select-none rounded-full ${pillClass} bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800`}
       >
         {person.name}
       </button>

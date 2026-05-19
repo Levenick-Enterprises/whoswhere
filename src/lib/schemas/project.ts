@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { nullableTrimmed } from "./shared";
 
-export const jobsiteInputSchema = z.object({
+export const projectInputSchema = z.object({
   name: z
     .string()
     .transform((s) => s.trim())
@@ -11,4 +11,4 @@ export const jobsiteInputSchema = z.object({
   notes: nullableTrimmed,
 });
 
-export type JobsiteInput = z.infer<typeof jobsiteInputSchema>;
+export type ProjectInput = z.infer<typeof projectInputSchema>;

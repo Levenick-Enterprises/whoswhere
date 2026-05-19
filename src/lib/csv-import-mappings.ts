@@ -5,13 +5,13 @@
 // Generic enough for any entity. `sniffMapping` is fully type-parameterized,
 // so adding a new entity is just a new field type + synonym dict export.
 
-export type JobsiteField = "name" | "address" | "notes";
+export type ProjectField = "name" | "address" | "notes";
 
-// `jobsite` here is the *target jobsite name* — the import resolves names
-// to IDs against the current set of active jobsites, then writes the row's
-// `current_jobsite_id`. No-match values leave the imported person
+// `project` here is the *target project name* — the import resolves names
+// to IDs against the current set of active projects, then writes the row's
+// `current_project_id`. No-match values leave the imported person
 // unassigned (visible in the preview before commit).
-export type PersonField = "name" | "position" | "phone" | "notes" | "jobsite";
+export type PersonField = "name" | "position" | "phone" | "notes" | "project";
 
 /**
  * Result of sniffing: each CSV header maps to one of our schema fields,
@@ -26,13 +26,13 @@ export type ColumnMapping<F extends string> = Record<string, F | "ignore">;
  * builds a reverse `Map<normalizedSynonym, field>` and does a single
  * O(1) get per header.
  */
-export const JOBSITE_HEADER_SYNONYMS: Record<JobsiteField, readonly string[]> = {
+export const PROJECT_HEADER_SYNONYMS: Record<ProjectField, readonly string[]> = {
   name: [
     "name",
+    "project",
     "jobsite",
     "job site",
     "site",
-    "project",
     "site name",
     "jobsite name",
     "project name",
@@ -55,15 +55,16 @@ export const PERSON_HEADER_SYNONYMS: Record<PersonField, readonly string[]> = {
   position: ["position", "role", "title", "job", "job title", "occupation"],
   phone: ["phone", "cell", "mobile", "phone number", "tel", "telephone"],
   notes: ["notes", "note", "comments", "comment", "description", "details", "memo"],
-  jobsite: [
+  project: [
+    "project",
     "jobsite",
     "job site",
     "site",
-    "project",
     "assignment",
     "location",
     "current site",
     "current jobsite",
+    "current project",
   ],
 };
 
@@ -72,36 +73,36 @@ function normalizeHeader(raw: string): string {
 }
 
 /**
- * Used by the people-import flow to resolve a CSV "Jobsite" column value
- * to an active jobsite. Same normalization as `normalizeHeader` so both
+ * Used by the people-import flow to resolve a CSV "Project" column value
+ * to an active project. Same normalization as `normalizeHeader` so both
  * sides of the comparison go through identical text mangling — forgiving
  * (case, whitespace, NFKC variants) without being magical (no fuzzy /
  * Levenshtein).
  */
-export function normalizeJobsiteName(raw: string): string {
+export function normalizeProjectName(raw: string): string {
   return raw.trim().normalize("NFKC").toLowerCase();
 }
 
-export type JobsiteHit =
+export type ProjectHit =
   | { kind: "single"; id: string; canonicalName: string }
   | { kind: "ambiguous"; canonicalNames: string[] };
 
 /**
- * Builds the normalized name → JobsiteHit lookup used by the people-import
- * flow. Two active jobsites that normalize to the same key are flagged
+ * Builds the normalized name → ProjectHit lookup used by the people-import
+ * flow. Two active projects that normalize to the same key are flagged
  * `ambiguous` so neither client nor server silently picks one of them
- * (the schema doesn't enforce unique jobsite names — operator can have
+ * (the schema doesn't enforce unique project names — operator can have
  * "Smith Residence" twice or "Smith Residence" + "smith residence" by
  * accident). Used by both the client preview and the server action so
  * a rename mid-session can't desync the client's snapshot from the
  * server's authoritative resolution.
  */
-export function buildJobsiteLookup(
-  jobsites: ReadonlyArray<{ id: string; name: string }>,
-): Map<string, JobsiteHit> {
-  const map = new Map<string, JobsiteHit>();
-  for (const j of jobsites) {
-    const key = normalizeJobsiteName(j.name);
+export function buildProjectLookup(
+  projects: ReadonlyArray<{ id: string; name: string }>,
+): Map<string, ProjectHit> {
+  const map = new Map<string, ProjectHit>();
+  for (const j of projects) {
+    const key = normalizeProjectName(j.name);
     const existing = map.get(key);
     if (!existing) {
       map.set(key, { kind: "single", id: j.id, canonicalName: j.name });

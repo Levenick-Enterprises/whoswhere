@@ -12,7 +12,7 @@ export default async function PeoplePage() {
   const { data, error } = await supabase
     .from("people")
     .select(
-      "id, name, position, phone, notes, current_jobsite:current_jobsite_id (id, name, archived_at)",
+      "id, name, position, phone, notes, current_project:current_project_id (id, name, archived_at)",
     )
     .is("archived_at", null)
     .order("name", { ascending: true });
@@ -21,14 +21,14 @@ export default async function PeoplePage() {
     throw new Error(`Supabase fetch failed: ${JSON.stringify(error)}`);
   }
 
-  // A person's current_jobsite_id can still reference a jobsite that has been
+  // A person's current_project_id can still reference a project that has been
   // archived. Treat those as unassigned in the UI — the foreman doesn't want
-  // to see crew labelled with a jobsite that's sitting in Trash.
+  // to see crew labelled with a project that's sitting in Trash.
   const people = (data ?? []).map((p) => ({
     ...p,
-    current_jobsite:
-      p.current_jobsite && !p.current_jobsite.archived_at
-        ? { id: p.current_jobsite.id, name: p.current_jobsite.name }
+    current_project:
+      p.current_project && !p.current_project.archived_at
+        ? { id: p.current_project.id, name: p.current_project.name }
         : null,
   }));
 

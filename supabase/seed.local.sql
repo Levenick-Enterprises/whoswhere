@@ -1,7 +1,7 @@
 -- Local-development + stress-test seed data, loaded automatically by
 -- `pnpm db:reset:local` against the LOCAL Docker stack.
 --
--- ⚠ DESTRUCTIVE — wipes `people` and `jobsites` unconditionally. Three
+-- ⚠ DESTRUCTIVE — wipes `people` and `projects` unconditionally. Three
 -- layered defenses keep this from ever running against a remote cluster:
 --   1. `scripts/db.sh` is the canonical wrapper for any migration flow
 --      and never invokes `db reset` on a remote.
@@ -11,7 +11,7 @@
 --   3. The guard block below refuses to execute on any cluster whose
 --      server IP is publicly routable.
 --
--- ~200 people across 15 Wisconsin-flavored jobsites. Names lean
+-- ~200 people across 15 Wisconsin-flavored projects. Names lean
 -- German / Polish / Scandinavian / Anglo (Wisconsin demographic mix).
 -- Phone numbers are deterministic 555-XXXX. ~10% of crew are
 -- unassigned at any time.
@@ -31,12 +31,12 @@ begin
 end $$;
 
 delete from public.people;
-delete from public.jobsites;
+delete from public.projects;
 
 -- ──────────────────────────────────────────────────────────────────────
--- Jobsites — 15 sites scattered across Wisconsin.
+-- Projects — 15 sites scattered across Wisconsin.
 -- ──────────────────────────────────────────────────────────────────────
-insert into public.jobsites (id, name, address, notes) values
+insert into public.projects (id, name, address, notes) values
   ('00000000-0000-0000-0000-000000000001', 'Smith Residence', '1834 Maple St, Madison', 'Kitchen + bath remodel; client home most days.'),
   ('00000000-0000-0000-0000-000000000002', 'Downtown Office Build', '210 Market Ave, Floor 4, Milwaukee', 'Tenant fit-out; site access via freight elevator.'),
   ('00000000-0000-0000-0000-000000000003', 'Hwy 12 Overpass', 'Mile marker 47, Hwy 12', 'Lane closure window: 9am-3pm weekdays.'),
@@ -121,9 +121,9 @@ sample as (
 ),
 js as (
   select id, row_number() over (order by name) as rn
-  from public.jobsites
+  from public.projects
 )
-insert into public.people (name, position, phone, current_jobsite_id)
+insert into public.people (name, position, phone, current_project_id)
 select
   s.full_name,
   -- Position distribution over 20 buckets, weighted toward common trades:
@@ -154,7 +154,7 @@ select
   -- Deterministic 555-XXXX number per row.
   '555-' || lpad((((s.rn * 7919) % 9000) + 1000)::text, 4, '0'),
   -- ~11% unassigned (every 9th row); the rest spread evenly across the 15
-  -- jobsites by rn modulo.
+  -- projects by rn modulo.
   case
     when s.rn % 9 = 0 then null
     else (select id from js where js.rn = ((s.rn % 15) + 1))

@@ -14,14 +14,14 @@ export default async function MorePage() {
   const supabase = await createSupabaseServerClient();
 
   const [
-    { count: trashedJobsites, error: jErr },
+    { count: trashedProjects, error: projErr },
     { count: trashedPeople, error: pErr },
     {
       data: { user },
     },
   ] = await Promise.all([
     supabase
-      .from("jobsites")
+      .from("projects")
       .select("*", { count: "exact", head: true })
       .not("archived_at", "is", null),
     supabase
@@ -31,13 +31,13 @@ export default async function MorePage() {
     supabase.auth.getUser(),
   ]);
 
-  if (jErr || pErr) {
+  if (projErr || pErr) {
     throw new Error(
-      `Supabase fetch failed — jobsites: ${JSON.stringify(jErr)} / people: ${JSON.stringify(pErr)}`,
+      `Supabase fetch failed — projects: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
     );
   }
 
-  const trashTotal = (trashedJobsites ?? 0) + (trashedPeople ?? 0);
+  const trashTotal = (trashedProjects ?? 0) + (trashedPeople ?? 0);
 
   return (
     <section className="flex flex-col gap-4">
@@ -62,12 +62,12 @@ export default async function MorePage() {
       </section>
 
       <Link
-        href="/jobsites/import"
+        href="/projects/import"
         className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="font-medium">Import jobsites from CSV</span>
-          <span className="text-xs text-zinc-500">Bulk-add jobsites from a spreadsheet.</span>
+          <span className="font-medium">Import projects from CSV</span>
+          <span className="text-xs text-zinc-500">Bulk-add projects from a spreadsheet.</span>
         </div>
       </Link>
 
@@ -78,7 +78,7 @@ export default async function MorePage() {
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-medium">Import people from CSV</span>
           <span className="text-xs text-zinc-500">
-            Bulk-add people from a spreadsheet. Map a Jobsite column to auto-assign them.
+            Bulk-add people from a spreadsheet. Map a Project column to auto-assign them.
           </span>
         </div>
       </Link>
@@ -90,7 +90,7 @@ export default async function MorePage() {
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-medium">Trash</span>
           <span className="text-xs text-zinc-500">
-            Deleted jobsites and people; restore from here.
+            Deleted projects and people; restore from here.
           </span>
         </div>
         <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs tabular-nums text-zinc-500 dark:bg-zinc-900">

@@ -1,19 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { JobsiteEditForm } from "@/components/JobsiteEditForm";
+import { ProjectEditForm } from "@/components/ProjectEditForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { deleteJobsiteAction, updateJobsiteAction } from "../actions";
+import { deleteProjectAction, updateProjectAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditJobsitePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data: jobsite, error } = await supabase
-    .from("jobsites")
+  const { data: project, error } = await supabase
+    .from("projects")
     .select("id, name, address, notes, archived_at, people(id, name)")
     .eq("id", id)
     .is("archived_at", null)
@@ -21,26 +21,26 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
     .maybeSingle();
 
   if (error) {
-    throw new Error(`fetch jobsite failed: ${JSON.stringify(error)}`);
+    throw new Error(`fetch project failed: ${JSON.stringify(error)}`);
   }
-  if (!jobsite) notFound();
+  if (!project) notFound();
 
-  const crew = jobsite.people.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const crew = project.people.slice().sort((a, b) => a.name.localeCompare(b.name));
 
-  const updateWithId = updateJobsiteAction.bind(null, jobsite.id);
-  const deleteWithId = deleteJobsiteAction.bind(null, jobsite.id);
+  const updateWithId = updateProjectAction.bind(null, project.id);
+  const deleteWithId = deleteProjectAction.bind(null, project.id);
 
   return (
     <section className="flex flex-col gap-4">
       <header className="flex items-baseline justify-between gap-3">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">{jobsite.name}</h1>
-        <Link href="/jobsites" className="text-sm text-zinc-500 hover:text-zinc-700">
+        <h1 className="truncate text-2xl font-semibold tracking-tight">{project.name}</h1>
+        <Link href="/projects" className="text-sm text-zinc-500 hover:text-zinc-700">
           Back
         </Link>
       </header>
 
       <Link
-        href={`/jobsites/${jobsite.id}/assign`}
+        href={`/projects/${project.id}/assign`}
         className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
       >
         <div className="flex items-center justify-between gap-3">
@@ -67,12 +67,12 @@ export default async function EditJobsitePage({ params }: { params: Promise<{ id
         )}
       </Link>
 
-      <JobsiteEditForm
-        jobsite={{
-          id: jobsite.id,
-          name: jobsite.name,
-          address: jobsite.address,
-          notes: jobsite.notes,
+      <ProjectEditForm
+        project={{
+          id: project.id,
+          name: project.name,
+          address: project.address,
+          notes: project.notes,
         }}
         updateAction={updateWithId}
         deleteAction={deleteWithId}

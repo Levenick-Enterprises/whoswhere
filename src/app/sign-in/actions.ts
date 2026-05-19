@@ -30,7 +30,7 @@ function isWithinCooldown(sentAtRaw: string | undefined): boolean {
 function buildSentUrl(next: string, opts: { invalid?: boolean } = {}): string {
   const search = new URLSearchParams({ sent: "1" });
   if (opts.invalid) search.set("invalid", "1");
-  if (next !== "/jobsites") search.set("next", next);
+  if (next !== "/projects") search.set("next", next);
   return `/sign-in?${search.toString()}`;
 }
 
@@ -74,7 +74,7 @@ export async function requestSignInCodeAction(formData: FormData) {
   if (!cooldown && rawEmail && parseAllowlist().includes(rawEmail)) {
     const supabase = await createSupabaseServerClient();
     const callbackUrl = new URL(`${await publicOrigin()}/auth/callback`);
-    if (next !== "/jobsites") callbackUrl.searchParams.set("next", next);
+    if (next !== "/projects") callbackUrl.searchParams.set("next", next);
     const { error } = await supabase.auth.signInWithOtp({
       email: rawEmail,
       options: { emailRedirectTo: callbackUrl.toString(), shouldCreateUser: true },

@@ -7,23 +7,23 @@ import { ImportPeopleForm } from "./ImportPeopleForm";
 export const dynamic = "force-dynamic";
 
 export default async function ImportPeoplePage() {
-  // Active jobsites are passed to the client form so it can resolve the
-  // mapped "Jobsite" column name → ID for each row before submit, AND
+  // Active projects are passed to the client form so it can resolve the
+  // mapped "Project" column name → ID for each row before submit, AND
   // show the resolved-or-not state in the preview table. Fail closed on
   // Supabase errors (transient network, RLS, session) — silently treating
-  // an error as "no jobsites" would let the operator import a mapped
-  // Jobsite column with every assignment dropped on the floor. Matches
+  // an error as "no projects" would let the operator import a mapped
+  // Project column with every assignment dropped on the floor. Matches
   // the read-error posture in src/app/people/page.tsx and /more/page.tsx.
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("jobsites")
+    .from("projects")
     .select("id, name")
     .is("archived_at", null)
     .order("name");
   if (error) {
     throw new Error(`Supabase fetch failed: ${JSON.stringify(error)}`);
   }
-  const activeJobsites = data ?? [];
+  const activeProjects = data ?? [];
 
   return (
     <section className="flex flex-col gap-4">
@@ -34,7 +34,7 @@ export default async function ImportPeoplePage() {
         </Link>
       </header>
 
-      <ImportPeopleForm activeJobsites={activeJobsites} />
+      <ImportPeopleForm activeProjects={activeProjects} />
     </section>
   );
 }

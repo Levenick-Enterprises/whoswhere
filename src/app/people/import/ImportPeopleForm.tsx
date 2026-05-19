@@ -8,8 +8,8 @@ import { FormField, inputClass } from "@/components/FormField";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ACTION_OK } from "@/lib/action-result";
 import {
-  buildJobsiteLookup,
-  normalizeJobsiteName,
+  buildProjectLookup,
+  normalizeProjectName,
   PERSON_HEADER_SYNONYMS,
   sniffMapping,
   type ColumnMapping,
@@ -26,36 +26,36 @@ const FIELD_OPTIONS: ReadonlyArray<{ value: PersonField | "ignore"; label: strin
   { value: "position", label: "Position" },
   { value: "phone", label: "Phone" },
   { value: "notes", label: "Notes" },
-  { value: "jobsite", label: "Jobsite" },
+  { value: "project", label: "Project" },
 ];
 
 const MAX_FILE_BYTES = 1_000_000; // ~1 MB; CSVs of people should be way under this
 const MAX_ROWS = 500; // Mirrors BULK_IMPORT_MAX_ROWS in the server action
 const PREVIEW_ROWS = 5;
 
-type ActiveJobsite = { id: string; name: string };
+type ActiveProject = { id: string; name: string };
 
 // Row shape we render in the preview + serialize to the server. The
-// `_jobsite*` underscored fields are preview-only and stripped before
+// `_project*` underscored fields are preview-only and stripped before
 // the hidden form-field JSON is built. The wire payload carries the
-// raw `jobsite_name` (NOT a pre-resolved ID) — the server is the
-// canonical resolver, so a jobsite rename mid-session can't desync a
+// raw `project_name` (NOT a pre-resolved ID) — the server is the
+// canonical resolver, so a project rename mid-session can't desync a
 // stale snapshot from the actual current mapping.
 //
-// `_jobsiteAmbiguous` distinguishes "this name matches multiple active
-// jobsites" from "no match at all" — both result in no auto-assignment,
+// `_projectAmbiguous` distinguishes "this name matches multiple active
+// projects" from "no match at all" — both result in no auto-assignment,
 // but the operator's fix is different (rename a duplicate vs. fix a typo).
 type MappedRow = {
   name: string;
   position: string;
   phone: string;
   notes: string;
-  jobsite_name?: string;
-  _jobsiteMatched?: string; // canonical name on unambiguous match; undefined otherwise
-  _jobsiteAmbiguous?: boolean;
+  project_name?: string;
+  _projectMatched?: string; // canonical name on unambiguous match; undefined otherwise
+  _projectAmbiguous?: boolean;
 };
 
-export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJobsite[] }) {
+export function ImportPeopleForm({ activeProjects }: { activeProjects: ActiveProject[] }) {
   const [fileName, setFileName] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [hiddenColumnCount, setHiddenColumnCount] = useState(0);
@@ -65,10 +65,10 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
   const [state, formAction] = useActionState(bulkCreatePeopleAction, ACTION_OK);
   const markBusy = useRegisterBusyOnce();
 
-  // Build name → JobsiteHit lookup using the shared helper. Used purely
+  // Build name → ProjectHit lookup using the shared helper. Used purely
   // for the preview here (server re-resolves authoritatively at submit
   // time using the same module — see [[reference]] in CLAUDE.md).
-  const jobsiteLookup = useMemo(() => buildJobsiteLookup(activeJobsites), [activeJobsites]);
+  const projectLookup = useMemo(() => buildProjectLookup(activeProjects), [activeProjects]);
 
   function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -110,7 +110,7 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
           );
           return;
         }
-        // Drop columns that are empty in every row. See ImportJobsitesForm
+        // Drop columns that are empty in every row. See ImportProjectsForm
         // for the Numbers/Excel/Sheets trailing-blanks rationale.
         const usefulHeaders = parsedHeaders.filter((h) =>
           result.data.some((row) => (row[h] ?? "").trim() !== ""),
@@ -146,9 +146,9 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
     setMapping((prev) => ({ ...prev, [header]: field }));
   }
 
-  // Map each CSV row to a person-shaped object + jobsite resolution metadata.
-  // Resolution here is preview-only — we set `jobsite_name` (raw value)
-  // on the payload and `_jobsiteMatched` / `_jobsiteAmbiguous` for the
+  // Map each CSV row to a person-shaped object + project resolution metadata.
+  // Resolution here is preview-only — we set `project_name` (raw value)
+  // on the payload and `_projectMatched` / `_projectAmbiguous` for the
   // preview UI. The server re-resolves at submit time via the same
   // helper, so client/server can't disagree on the rules.
   const mappedRows = useMemo<MappedRow[]>(() => {
@@ -164,24 +164,24 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
         phone: out.phone ?? "",
         notes: out.notes ?? "",
       };
-      const jobsiteRaw = out.jobsite?.trim();
-      if (jobsiteRaw) {
+      const projectRaw = out.project?.trim();
+      if (projectRaw) {
         // Always carry the raw name through to the payload — the server
         // resolves authoritatively, even if the client preview shows
         // "no match" against the page-load snapshot.
-        mapped.jobsite_name = jobsiteRaw;
-        const hit = jobsiteLookup.get(normalizeJobsiteName(jobsiteRaw));
+        mapped.project_name = projectRaw;
+        const hit = projectLookup.get(normalizeProjectName(projectRaw));
         if (hit?.kind === "single") {
-          mapped._jobsiteMatched = hit.canonicalName;
+          mapped._projectMatched = hit.canonicalName;
         } else if (hit?.kind === "ambiguous") {
-          mapped._jobsiteAmbiguous = true;
+          mapped._projectAmbiguous = true;
         }
         // No hit at all → leave preview metadata empty; preview renders the
         // "no match" state.
       }
       return mapped;
     });
-  }, [rows, mapping, jobsiteLookup]);
+  }, [rows, mapping, projectLookup]);
 
   // Run safeParse client-side for instant feedback; the server re-runs the
   // same check on submit as defense in depth.
@@ -206,30 +206,30 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
     rowErrors.length === 0 &&
     !tooManyRows;
 
-  const jobsiteColumnMapped = Object.values(mapping).some((f) => f === "jobsite");
-  const ambiguousRowCount = mappedRows.filter((r) => r._jobsiteAmbiguous).length;
-  // Rows that *tried* to assign (jobsite_name is set) but didn't resolve and
+  const projectColumnMapped = Object.values(mapping).some((f) => f === "project");
+  const ambiguousRowCount = mappedRows.filter((r) => r._projectAmbiguous).length;
+  // Rows that *tried* to assign (project_name is set) but didn't resolve and
   // aren't ambiguous → a plain "no match" case (typo, archived, etc.). The
   // preview only shows the first PREVIEW_ROWS, so without this summary an
   // operator could miss every no-match row past row 5.
   const noMatchRows = useMemo(() => {
-    if (!jobsiteColumnMapped) return [] as { row: number; value: string }[];
+    if (!projectColumnMapped) return [] as { row: number; value: string }[];
     const out: { row: number; value: string }[] = [];
     for (let i = 0; i < mappedRows.length; i++) {
       const r = mappedRows[i];
-      if (r.jobsite_name && !r._jobsiteMatched && !r._jobsiteAmbiguous) {
-        out.push({ row: i + 1, value: r.jobsite_name });
+      if (r.project_name && !r._projectMatched && !r._projectAmbiguous) {
+        out.push({ row: i + 1, value: r.project_name });
       }
     }
     return out;
-  }, [mappedRows, jobsiteColumnMapped]);
+  }, [mappedRows, projectColumnMapped]);
 
-  // Strip preview-only `_jobsite*` fields before serialization. The server
-  // receives only schema fields + the raw `jobsite_name` (resolved server-side).
+  // Strip preview-only `_project*` fields before serialization. The server
+  // receives only schema fields + the raw `project_name` (resolved server-side).
   const payloadRows = useMemo(() => {
-    return mappedRows.map(({ _jobsiteMatched, _jobsiteAmbiguous, ...rest }) => {
-      void _jobsiteMatched;
-      void _jobsiteAmbiguous;
+    return mappedRows.map(({ _projectMatched, _projectAmbiguous, ...rest }) => {
+      void _projectMatched;
+      void _projectAmbiguous;
       return rest;
     });
   }, [mappedRows]);
@@ -238,9 +238,9 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
     <div className="flex flex-col gap-5" onChange={markBusy}>
       <p className="text-sm text-zinc-500">
         Upload a CSV of people. We&apos;ll guess which columns match our fields from your headers —
-        correct anything that&apos;s wrong. Map a <span className="font-medium">Jobsite</span>{" "}
-        column to auto-assign each person to a matching jobsite by name (case-insensitive, active
-        jobsites only). No-match values land in the Unassigned pile.
+        correct anything that&apos;s wrong. Map a <span className="font-medium">Project</span>{" "}
+        column to auto-assign each person to a matching project by name (case-insensitive, active
+        projects only). No-match values land in the Unassigned pile.
       </p>
 
       <div className="flex flex-col gap-2">
@@ -325,7 +325,7 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
                     <th className="px-3 py-2 font-medium">Position</th>
                     <th className="px-3 py-2 font-medium">Phone</th>
                     <th className="px-3 py-2 font-medium">Notes</th>
-                    <th className="px-3 py-2 font-medium">Jobsite</th>
+                    <th className="px-3 py-2 font-medium">Project</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -344,20 +344,20 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
                         {row.notes || <em className="text-zinc-400">—</em>}
                       </td>
                       <td className="px-3 py-2">
-                        {!jobsiteColumnMapped ? (
+                        {!projectColumnMapped ? (
                           <em className="text-zinc-400">—</em>
-                        ) : row._jobsiteMatched ? (
+                        ) : row._projectMatched ? (
                           <span>
-                            {row._jobsiteMatched}{" "}
+                            {row._projectMatched}{" "}
                             <span className="text-green-600 dark:text-green-400">✓</span>
                           </span>
-                        ) : row._jobsiteAmbiguous ? (
+                        ) : row._projectAmbiguous ? (
                           <em className="text-amber-700 dark:text-amber-400">
-                            {row.jobsite_name} — ambiguous (multiple jobsites match)
+                            {row.project_name} — ambiguous (multiple projects match)
                           </em>
                         ) : (
                           <em className="text-amber-700 dark:text-amber-400">
-                            {row.jobsite_name ? `${row.jobsite_name} — unassigned` : "— unassigned"}
+                            {row.project_name ? `${row.project_name} — unassigned` : "— unassigned"}
                           </em>
                         )}
                       </td>
@@ -384,9 +384,9 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
 
           {ambiguousRowCount > 0 && (
             <p className="text-sm text-amber-700 dark:text-amber-400" role="status">
-              {ambiguousRowCount} {ambiguousRowCount === 1 ? "row matches" : "rows match"} a jobsite
-              name that&apos;s shared by multiple active jobsites. Those people will land Unassigned
-              — rename one of the duplicate jobsites to make the match unambiguous.
+              {ambiguousRowCount} {ambiguousRowCount === 1 ? "row matches" : "rows match"} a project
+              name that&apos;s shared by multiple active projects. Those people will land Unassigned
+              — rename one of the duplicate projects to make the match unambiguous.
             </p>
           )}
 
@@ -395,9 +395,9 @@ export function ImportPeopleForm({ activeJobsites }: { activeJobsites: ActiveJob
               <summary className="cursor-pointer text-sm font-medium text-amber-800 dark:text-amber-200">
                 {noMatchRows.length}{" "}
                 {noMatchRows.length === 1
-                  ? "row's jobsite value doesn't"
-                  : "rows' jobsite values don't"}{" "}
-                match an active jobsite — those people will land Unassigned
+                  ? "row's project value doesn't"
+                  : "rows' project values don't"}{" "}
+                match an active project — those people will land Unassigned
               </summary>
               <ul className="mt-2 flex flex-col gap-1 text-sm text-amber-800 dark:text-amber-200">
                 {noMatchRows.slice(0, 20).map((m) => (

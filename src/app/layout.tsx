@@ -36,7 +36,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Who's Where?",
-  description: "A digital magnet board for tracking who's at which jobsite.",
+  description: "A digital magnet board for tracking who's at which project.",
 };
 
 export const viewport = {

@@ -1,6 +1,6 @@
 # whoswhere
 
-A digital magnet board for a construction foreman: list of jobsites, list of people, drag people between jobsites.
+A digital magnet board for a construction foreman: list of projects, list of people, drag people between projects.
 
 ## Stack
 

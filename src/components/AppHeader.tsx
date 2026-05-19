@@ -18,13 +18,13 @@ export function AppHeader() {
   const moreActive = morePaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   // Re-tapping the hamburger while on /more closes the menu, mirroring how
-  // toggleable nav drawers feel. Fall back to /jobsites if there's no history
+  // toggleable nav drawers feel. Fall back to /projects if there's no history
   // (e.g. /more is the entry point on a fresh tab).
   const handleMoreClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (!onMorePage) return;
     event.preventDefault();
     if (window.history.length > 1) router.back();
-    else router.push("/jobsites");
+    else router.push("/projects");
   };
 
   return (
@@ -34,7 +34,7 @@ export function AppHeader() {
     >
       <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-4 py-3">
         <Link
-          href="/jobsites"
+          href="/projects"
           aria-label="Who's Where? — home"
           className="text-lg font-semibold tracking-tight text-zinc-950 transition-colors hover:text-zinc-700 dark:text-zinc-50 dark:hover:text-zinc-300"
         >

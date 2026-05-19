@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 /**
  * Magic-link landing route. Supabase redirects here with a `code` query param;
  * we exchange it for a session cookie and bounce to the originally-requested
- * path (or /jobsites by default). Redirect targets are built from the public
+ * path (or /projects by default). Redirect targets are built from the public
  * origin (headers), not request.url — behind a reverse proxy like Cloudflare
  * Tunnel the latter resolves to http://localhost:3000.
  */

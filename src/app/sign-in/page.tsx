@@ -95,7 +95,7 @@ export default async function SignInPage({
               <span />
             )}
             <Link
-              href={`/sign-in${next !== "/jobsites" ? `?next=${encodeURIComponent(next)}` : ""}`}
+              href={`/sign-in${next !== "/projects" ? `?next=${encodeURIComponent(next)}` : ""}`}
               className="text-sm text-zinc-500 underline hover:text-zinc-700 dark:hover:text-zinc-300"
             >
               Use a different email

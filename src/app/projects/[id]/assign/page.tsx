@@ -8,44 +8,44 @@ import { CrewPicker } from "./CrewPicker";
 export const dynamic = "force-dynamic";
 
 export default async function AssignCrewPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: jobsiteId } = await params;
+  const { id: projectId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: jobsite, error: jErr }, { data: people, error: pErr }] = await Promise.all([
+  const [{ data: project, error: projErr }, { data: people, error: pErr }] = await Promise.all([
     supabase
-      .from("jobsites")
+      .from("projects")
       .select("id, name")
-      .eq("id", jobsiteId)
+      .eq("id", projectId)
       .is("archived_at", null)
       .maybeSingle(),
     supabase
       .from("people")
       .select(
-        "id, name, position, phone, current_jobsite_id, current_jobsite:current_jobsite_id (id, name, archived_at)",
+        "id, name, position, phone, current_project_id, current_project:current_project_id (id, name, archived_at)",
       )
       .is("archived_at", null)
       .order("name", { ascending: true }),
   ]);
 
-  if (jErr || pErr) {
+  if (projErr || pErr) {
     throw new Error(
-      `fetch failed — jobsite: ${JSON.stringify(jErr)} / people: ${JSON.stringify(pErr)}`,
+      `fetch failed — project: ${JSON.stringify(projErr)} / people: ${JSON.stringify(pErr)}`,
     );
   }
-  if (!jobsite) notFound();
+  if (!project) notFound();
 
   return (
     <section className="flex flex-col gap-4">
       <header className="flex items-baseline justify-between gap-3">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">Crew for {jobsite.name}</h1>
+        <h1 className="truncate text-2xl font-semibold tracking-tight">Crew for {project.name}</h1>
         <Link
-          href={`/jobsites/${jobsite.id}`}
+          href={`/projects/${project.id}`}
           className="text-sm text-zinc-500 hover:text-zinc-700"
         >
           Done
         </Link>
       </header>
-      <CrewPicker jobsiteId={jobsite.id} people={people ?? []} />
+      <CrewPicker projectId={project.id} people={people ?? []} />
     </section>
   );
 }

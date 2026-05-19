@@ -10,11 +10,11 @@ type Person = {
   name: string;
   position: string | null;
   phone: string | null;
-  current_jobsite_id: string | null;
-  current_jobsite: { id: string; name: string; archived_at: string | null } | null;
+  current_project_id: string | null;
+  current_project: { id: string; name: string; archived_at: string | null } | null;
 };
 
-export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: Person[] }) {
+export function CrewPicker({ projectId, people }: { projectId: string; people: Person[] }) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -25,7 +25,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
         p.name.toLowerCase().includes(q) ||
         p.position?.toLowerCase().includes(q) ||
         p.phone?.toLowerCase().includes(q) ||
-        p.current_jobsite?.name.toLowerCase().includes(q),
+        p.current_project?.name.toLowerCase().includes(q),
     );
   }, [people, query]);
 
@@ -33,8 +33,8 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
   const elsewhere: Person[] = [];
   const unassigned: Person[] = [];
   for (const person of filtered) {
-    if (person.current_jobsite_id === jobsiteId) here.push(person);
-    else if (person.current_jobsite && !person.current_jobsite.archived_at) elsewhere.push(person);
+    if (person.current_project_id === projectId) here.push(person);
+    else if (person.current_project && !person.current_project.archived_at) elsewhere.push(person);
     else unassigned.push(person);
   }
 
@@ -46,7 +46,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
       <input
         type="search"
         inputMode="search"
-        placeholder="Search names, positions, phones, or jobsites…"
+        placeholder="Search names, positions, phones, or projects…"
         aria-label="Search crew"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -76,7 +76,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
                   <AssignButton
                     action={reassignPersonAction}
                     personId={person.id}
-                    jobsiteId={null}
+                    projectId={null}
                     label="Remove"
                     variant="danger"
                   />
@@ -98,7 +98,7 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
                   <AssignButton
                     action={reassignPersonAction}
                     personId={person.id}
-                    jobsiteId={jobsiteId}
+                    projectId={projectId}
                     label="Add to crew"
                   />
                 }
@@ -109,18 +109,18 @@ export function CrewPicker({ jobsiteId, people }: { jobsiteId: string; people: P
       )}
 
       {elsewhere.length > 0 && (
-        <Section title="At another jobsite" count={elsewhere.length}>
+        <Section title="At another project" count={elsewhere.length}>
           <ul className="flex flex-col gap-2">
             {elsewhere.map((person) => (
               <PersonRow
                 key={person.id}
                 person={person}
-                badge={person.current_jobsite?.name}
+                badge={person.current_project?.name}
                 action={
                   <AssignButton
                     action={reassignPersonAction}
                     personId={person.id}
-                    jobsiteId={jobsiteId}
+                    projectId={projectId}
                     label="Move here"
                     variant="secondary"
                   />

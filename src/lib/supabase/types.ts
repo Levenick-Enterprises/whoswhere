@@ -33,7 +33,48 @@ export type Database = {
   };
   public: {
     Tables: {
-      jobsites: {
+      people: {
+        Row: {
+          archived_at: string | null;
+          created_at: string;
+          current_project_id: string | null;
+          id: string;
+          name: string;
+          notes: string | null;
+          phone: string | null;
+          position: string | null;
+        };
+        Insert: {
+          archived_at?: string | null;
+          created_at?: string;
+          current_project_id?: string | null;
+          id?: string;
+          name: string;
+          notes?: string | null;
+          phone?: string | null;
+          position?: string | null;
+        };
+        Update: {
+          archived_at?: string | null;
+          created_at?: string;
+          current_project_id?: string | null;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+          phone?: string | null;
+          position?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "people_current_project_id_fkey";
+            columns: ["current_project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      projects: {
         Row: {
           address: string | null;
           archived_at: string | null;
@@ -59,47 +100,6 @@ export type Database = {
           notes?: string | null;
         };
         Relationships: [];
-      };
-      people: {
-        Row: {
-          archived_at: string | null;
-          created_at: string;
-          current_jobsite_id: string | null;
-          id: string;
-          name: string;
-          notes: string | null;
-          phone: string | null;
-          position: string | null;
-        };
-        Insert: {
-          archived_at?: string | null;
-          created_at?: string;
-          current_jobsite_id?: string | null;
-          id?: string;
-          name: string;
-          notes?: string | null;
-          phone?: string | null;
-          position?: string | null;
-        };
-        Update: {
-          archived_at?: string | null;
-          created_at?: string;
-          current_jobsite_id?: string | null;
-          id?: string;
-          name?: string;
-          notes?: string | null;
-          phone?: string | null;
-          position?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "people_current_jobsite_id_fkey";
-            columns: ["current_jobsite_id"];
-            isOneToOne: false;
-            referencedRelation: "jobsites";
-            referencedColumns: ["id"];
-          },
-        ];
       };
     };
     Views: {

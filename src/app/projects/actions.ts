@@ -4,18 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { type ActionResult } from "@/lib/action-result";
-import { jobsiteInputSchema, type JobsiteInput } from "@/lib/schemas/jobsite";
+import { projectInputSchema, type ProjectInput } from "@/lib/schemas/project";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function parseFormData(formData: FormData) {
-  return jobsiteInputSchema.safeParse({
+  return projectInputSchema.safeParse({
     name: formData.get("name") ?? "",
     address: formData.get("address") ?? "",
     notes: formData.get("notes") ?? "",
   });
 }
 
-export async function createJobsiteAction(
+export async function createProjectAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
@@ -25,18 +25,18 @@ export async function createJobsiteAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("jobsites").insert(parsed.data).select("id").single();
+  const { data, error } = await supabase.from("projects").insert(parsed.data).select("id").single();
 
   if (error) {
-    console.error("[createJobsite] supabase:", error);
-    return { ok: false, message: "Couldn't create jobsite. Please try again." };
+    console.error("[createProject] supabase:", error);
+    return { ok: false, message: "Couldn't create project. Please try again." };
   }
 
-  revalidatePath("/jobsites");
-  redirect(`/jobsites/${data.id}`);
+  revalidatePath("/projects");
+  redirect(`/projects/${data.id}`);
 }
 
-export async function updateJobsiteAction(
+export async function updateProjectAction(
   id: string,
   _prev: ActionResult,
   formData: FormData,
@@ -47,54 +47,54 @@ export async function updateJobsiteAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("jobsites").update(parsed.data).eq("id", id);
+  const { error } = await supabase.from("projects").update(parsed.data).eq("id", id);
 
   if (error) {
-    console.error("[updateJobsite] supabase:", error);
+    console.error("[updateProject] supabase:", error);
     return { ok: false, message: "Couldn't save. Please try again." };
   }
 
-  revalidatePath("/jobsites");
-  revalidatePath(`/jobsites/${id}`);
-  redirect(`/jobsites/${id}`);
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${id}`);
+  redirect(`/projects/${id}`);
 }
 
-export async function deleteJobsiteAction(
+export async function deleteProjectAction(
   id: string,
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
-    .from("jobsites")
+    .from("projects")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) {
-    console.error("[deleteJobsite] supabase:", error);
+    console.error("[deleteProject] supabase:", error);
     return { ok: false, message: "Couldn't delete. Please try again." };
   }
 
-  revalidatePath("/jobsites");
+  revalidatePath("/projects");
   revalidatePath("/people");
   revalidatePath("/trash");
-  redirect("/jobsites");
+  redirect("/projects");
 }
 
-export async function restoreJobsiteAction(
+export async function restoreProjectAction(
   id: string,
   _prev: ActionResult,
   _formData: FormData,
 ): Promise<ActionResult> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("jobsites").update({ archived_at: null }).eq("id", id);
+  const { error } = await supabase.from("projects").update({ archived_at: null }).eq("id", id);
 
   if (error) {
-    console.error("[restoreJobsite] supabase:", error);
+    console.error("[restoreProject] supabase:", error);
     return { ok: false, message: "Couldn't restore. Please try again." };
   }
 
-  revalidatePath("/jobsites");
+  revalidatePath("/projects");
   revalidatePath("/trash");
   return { ok: true, value: undefined };
 }
@@ -105,18 +105,18 @@ export async function restoreJobsiteAction(
 const BULK_IMPORT_MAX_ROWS = 500;
 
 /**
- * Inserts an array of jobsite rows from the CSV-import UI. Client posts a
+ * Inserts an array of project rows from the CSV-import UI. Client posts a
  * JSON-stringified array via the hidden `rows` form field; we re-validate
- * each row server-side with the same `jobsiteInputSchema` the single-create
+ * each row server-side with the same `projectInputSchema` the single-create
  * action uses (defense in depth — never trust the client did the right
  * normalization). All-or-nothing: any row failing validation rejects the
  * whole import with a row-keyed message, so the operator sees exactly
  * which row to fix in their CSV.
  *
- * Runs under the existing `authed_insert_jobsites` RLS policy (single
+ * Runs under the existing `authed_insert_projects` RLS policy (single
  * statement, multiple values) — no policy change required.
  */
-export async function bulkCreateJobsitesAction(
+export async function bulkCreateProjectsAction(
   _prev: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
@@ -140,9 +140,9 @@ export async function bulkCreateJobsitesAction(
     };
   }
 
-  const parsedRows: JobsiteInput[] = [];
+  const parsedRows: ProjectInput[] = [];
   for (let i = 0; i < rawRows.length; i++) {
-    const result = jobsiteInputSchema.safeParse(rawRows[i]);
+    const result = projectInputSchema.safeParse(rawRows[i]);
     if (!result.success) {
       const message = result.error.issues[0]?.message ?? "Invalid value";
       return { ok: false, message: `Row ${i + 1}: ${message}` };
@@ -151,13 +151,13 @@ export async function bulkCreateJobsitesAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("jobsites").insert(parsedRows).select("id");
+  const { error } = await supabase.from("projects").insert(parsedRows).select("id");
 
   if (error) {
-    console.error("[bulkCreateJobsites] supabase:", error);
+    console.error("[bulkCreateProjects] supabase:", error);
     return { ok: false, message: "Couldn't import. Please try again." };
   }
 
-  revalidatePath("/jobsites");
-  redirect("/jobsites");
+  revalidatePath("/projects");
+  redirect("/projects");
 }

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" class="policy">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — whoswhere</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="policy">
+    <main>
+      <a class="back" href="/">&larr; Back to home</a>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Last updated: May 20, 2026</p>
+
+      <article>
+        <p>
+          This policy describes how Levenick Enterprises (&ldquo;we,&rdquo; &ldquo;us&rdquo;)
+          collects and uses information when you access the whoswhere service.
+        </p>
+
+        <section>
+          <h2>1. Who we are</h2>
+          <p>
+            whoswhere is operated by Levenick Enterprises. We provide a private, per-tenant
+            application that helps construction foremen and superintendents track which crew members
+            are at which projects.
+          </p>
+        </section>
+
+        <section>
+          <h2>2. Information we collect</h2>
+          <p>
+            <strong>Account information.</strong> Your email address, used to authenticate you via a
+            one-time numeric sign-in code. We don&rsquo;t store passwords; we don&rsquo;t use a
+            marketing list.
+          </p>
+          <p>
+            <strong>Operational data.</strong> Whatever your tenant&rsquo;s authorized users put
+            into the application: project names and metadata (numbers, addresses, role assignments),
+            crew member names and metadata (employee numbers, positions, phone numbers, notes), and
+            the assignments between them. The tenant decides what data goes in.
+          </p>
+          <p>
+            <strong>Server logs.</strong> Standard request metadata (IP address, user agent,
+            timestamp, route) retained briefly for debugging and abuse prevention.
+          </p>
+        </section>
+
+        <section>
+          <h2>3. How we use the information</h2>
+          <p>
+            We use the data above to operate the service: render the application, persist your
+            edits, authenticate you, and respond to support requests. We don&rsquo;t sell, rent, or
+            share your data with third parties for advertising or analytics purposes.
+          </p>
+        </section>
+
+        <section>
+          <h2>4. How we store the information</h2>
+          <p>
+            Each tenant&rsquo;s data lives in its own dedicated Postgres database, isolated from
+            every other tenant by both database boundary and row-level security policies. Data is
+            encrypted in transit (HTTPS). Sessions are maintained via short-lived HTTP-only cookies.
+          </p>
+        </section>
+
+        <section>
+          <h2>5. Service providers (subprocessors)</h2>
+          <p>We rely on a small set of vendors to operate the service:</p>
+          <ul>
+            <li>
+              <a href="https://supabase.com/privacy" rel="noopener noreferrer">Supabase</a> —
+              database hosting and authentication infrastructure.
+            </li>
+            <li>
+              <a href="https://vercel.com/legal/privacy-policy" rel="noopener noreferrer">Vercel</a>
+              — application hosting and edge networking.
+            </li>
+            <li>
+              <a href="https://resend.com/legal/privacy-policy" rel="noopener noreferrer">Resend</a>
+              — sending one-time sign-in code emails.
+            </li>
+            <li>
+              <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer"
+                >Cloudflare</a
+              >
+              — DNS and email forwarding.
+            </li>
+          </ul>
+          <p>
+            Each of these vendors has its own privacy policy; we link them above. We will update
+            this list if we add or change a subprocessor.
+          </p>
+        </section>
+
+        <section>
+          <h2>6. Retention</h2>
+          <p>
+            We retain operational data while your account is active. If you stop using the service
+            or close the account, you can request deletion of all data associated with your tenant
+            via the contact email below. Server logs roll off on a short cycle (weeks, not years).
+          </p>
+        </section>
+
+        <section>
+          <h2>7. Children&rsquo;s privacy</h2>
+          <p>
+            whoswhere is intended for use by businesses and is not directed at children. We
+            don&rsquo;t knowingly collect personal information from anyone under 16. If you believe
+            we&rsquo;ve done so, contact us and we&rsquo;ll delete it.
+          </p>
+        </section>
+
+        <section>
+          <h2>8. Cookies and similar technologies</h2>
+          <p>
+            We use only the essential authentication cookies set by Supabase Auth so that signing in
+            works. We don&rsquo;t use analytics cookies, advertising cookies, or third-party
+            trackers.
+          </p>
+        </section>
+
+        <section>
+          <h2>9. Your rights</h2>
+          <p>
+            You can request access to, correction of, or deletion of the data we hold about you by
+            emailing the contact below. Depending on where you live, you may have additional rights
+            under local data protection law (for example, the GDPR in the EU or the CCPA in
+            California). Tell us which rights you&rsquo;d like to exercise and we&rsquo;ll respond.
+          </p>
+        </section>
+
+        <section>
+          <h2>10. Changes to this policy</h2>
+          <p>
+            When we make material changes to this policy, we&rsquo;ll update the &ldquo;Last
+            updated&rdquo; date at the top and, for changes that affect how we handle your data,
+            notify tenants directly. Continued use of the service after changes take effect means
+            you accept the revised policy.
+          </p>
+        </section>
+
+        <section>
+          <h2>11. Contact</h2>
+          <p>
+            For any privacy question or request, email
+            <a href="mailto:hello@whos-where.com">hello@whos-where.com</a>.
+          </p>
+        </section>
+      </article>
+    </main>
+
+    <footer>
+      <span>&copy; 2026 Levenick Enterprises</span>
+      <span>
+        <a href="/privacy">Privacy</a>
+        <a href="/aup">Acceptable Use</a>
+      </span>
+    </footer>
+  </body>
+</html>

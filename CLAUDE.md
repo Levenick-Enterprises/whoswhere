@@ -156,9 +156,12 @@ Each tenant Supabase project IS the auth realm — sessions don't cross tenant b
    - `APP_ORIGIN` — the tenant's public URL (e.g. `https://demo.whos-where.com`). Pins `publicOrigin()` to avoid trusting `x-forwarded-host` for magic-link callbacks. Leave unset on Preview/Development scope so per-deploy preview URLs and local dev still work via header inference.
    - (`ALLOWED_EMAILS` is no longer required — the table is the gate. Existing tenants can delete the Vercel env var after smoke-testing the post-deploy sign-in path.)
 
+### Marketing site (`whos-where.com` apex)
+
+Static HTML/CSS site under `www/` — no framework, no build step. Three pages: `/` (landing), `/privacy`, `/aup`. Hosted as a separate Vercel project (`whoswhere-www`) with Root Directory = `www`. Auto-deploys from `main`. Apex domain `whos-where.com` + `www.whos-where.com` both point at this project; Vercel handles the canonical redirect. Contact = `mailto:hello@whos-where.com` (Cloudflare Email Routing forwards to my inbox). Why plain HTML and not a Next.js app: Next.js inside `www/` fought pnpm's symlink-into-store layout (Turbopack rejects symlinks pointing outside the project root) and three small static pages don't need React. Worth revisiting if the marketing site grows real interactivity.
+
 ### Deferred ops
 
-- `whos-where.com` apex — no record yet; visitors hit Cloudflare's default. Revisit when there's actual landing-page content.
 - Branch-named preview subdomains (`<branch>.dev.whos-where.com` or `pr1337.dev.whos-where.com`) — issue #20. Needs a GH Action that aliases each preview deploy. For now, use Vercel's auto `*.vercel.app` URLs.
 
 ## PR Workflow
